@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Cuentos de Educación Financiera Infantil"
+description = "Una tienda independiente de libros ilustrados impresos bajo demanda para ayudar a niños y familias a aprender educación financiera. Incluye catálogo, captura segura de datos de envío antes del pago, administración de libros y pedidos, y exportación CSV para Gelato."
+version = "1.0.0"
+id = "artifacts/cuentos-financieros"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21398
+
+[services.development]
+run = "pnpm --filter @workspace/cuentos-financieros run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cuentos-financieros", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/cuentos-financieros/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21398"
+BASE_PATH = "/"

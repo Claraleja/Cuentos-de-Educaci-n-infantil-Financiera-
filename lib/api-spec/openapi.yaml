@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: store
+    description: Public storefront
+  - name: admin
+    description: Protected store administration
+  - name: checkout
+    description: Shipping capture and external checkout
 paths:
   /healthz:
     get:
@@ -24,6 +30,275 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /books:
+    get:
+      operationId: getStoreBooks
+      tags: [store]
+      summary: List active books
+      responses:
+        "200":
+          description: Active books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+  /settings:
+    get:
+      operationId: getStoreSettings
+      tags: [store]
+      summary: Get public store settings
+      responses:
+        "200":
+          description: Store settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+  /checkout:
+    post:
+      operationId: createCheckoutOrder
+      tags: [checkout]
+      summary: Save shipping details and start external checkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutInput"
+      responses:
+        "201":
+          description: Order stored before checkout redirect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResult"
+        "400":
+          description: Invalid shipping or checkout details
+  /admin/auth/session:
+    get:
+      operationId: getAdminSession
+      tags: [admin]
+      summary: Check whether administration is configured and authenticated
+      responses:
+        "200":
+          description: Session state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+  /admin/auth/setup:
+    post:
+      operationId: initializeAdmin
+      tags: [admin]
+      summary: Set the first administrator password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCredentials"
+      responses:
+        "201":
+          description: Administrator configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "409":
+          description: Administrator is already configured
+  /admin/auth/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Sign in to administration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCredentials"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "401":
+          description: Invalid password
+  /admin/auth/logout:
+    post:
+      operationId: adminLogout
+      tags: [admin]
+      summary: Sign out of administration
+      responses:
+        "200":
+          description: Signed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+  /admin/summary:
+    get:
+      operationId: getAdminSummary
+      tags: [admin]
+      summary: Get store overview counts
+      responses:
+        "200":
+          description: Store summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSummary"
+        "401":
+          description: Administrator authentication required
+  /admin/books:
+    get:
+      operationId: getAdminBooks
+      tags: [admin]
+      summary: List all books for administration
+      responses:
+        "200":
+          description: Books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+        "401":
+          description: Administrator authentication required
+    post:
+      operationId: createBook
+      tags: [admin]
+      summary: Add a book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookInput"
+      responses:
+        "201":
+          description: Book created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "401":
+          description: Administrator authentication required
+  /admin/books/{id}:
+    patch:
+      operationId: updateBook
+      tags: [admin]
+      summary: Edit a book
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookInput"
+      responses:
+        "200":
+          description: Updated book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "401":
+          description: Administrator authentication required
+        "404":
+          description: Book not found
+    delete:
+      operationId: deleteBook
+      tags: [admin]
+      summary: Delete a book from the catalog
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Book deleted
+        "401":
+          description: Administrator authentication required
+        "404":
+          description: Book not found
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      summary: Get editable store settings
+      responses:
+        "200":
+          description: Editable store settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+        "401":
+          description: Administrator authentication required
+    put:
+      operationId: updateStoreSettings
+      tags: [admin]
+      summary: Update brand and contact settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreSettingsInput"
+      responses:
+        "200":
+          description: Saved store settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+        "401":
+          description: Administrator authentication required
+  /admin/orders:
+    get:
+      operationId: getAdminOrders
+      tags: [admin]
+      summary: List captured orders
+      responses:
+        "200":
+          description: Orders, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+        "401":
+          description: Administrator authentication required
+  /admin/orders/export.csv:
+    get:
+      operationId: exportAdminOrders
+      tags: [admin]
+      summary: Export captured orders as Gelato-ready CSV
+      responses:
+        "200":
+          description: CSV with the agreed shipping and product columns
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          description: Administrator authentication required
 components:
   schemas:
     HealthStatus:
@@ -33,4 +308,192 @@ components:
           type: string
       required:
         - status
+    Book:
+      type: object
+      required:
+        - id
+        - title
+        - subtitle
+        - author
+        - shortDescription
+        - description
+        - recommendedAge
+        - pages
+        - priceEur
+        - priceUsd
+        - checkoutUrlEur
+        - checkoutUrlUsd
+        - coverImageUrl
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        subtitle: { type: string }
+        author: { type: string }
+        shortDescription: { type: string }
+        description: { type: string }
+        recommendedAge: { type: string }
+        pages: { type: integer }
+        priceEur: { type: number }
+        priceUsd: { type: number }
+        checkoutUrlEur: { type: string }
+        checkoutUrlUsd: { type: string }
+        coverImageUrl: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    BookInput:
+      type: object
+      required:
+        - title
+        - subtitle
+        - author
+        - shortDescription
+        - description
+        - recommendedAge
+        - pages
+        - priceEur
+        - priceUsd
+        - checkoutUrlEur
+        - checkoutUrlUsd
+        - coverImageUrl
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        subtitle: { type: string, maxLength: 300 }
+        author: { type: string, maxLength: 160 }
+        shortDescription: { type: string, maxLength: 500 }
+        description: { type: string, maxLength: 10000 }
+        recommendedAge: { type: string, maxLength: 100 }
+        pages: { type: integer, minimum: 1, maximum: 5000 }
+        priceEur: { type: number, minimum: 0 }
+        priceUsd: { type: number, minimum: 0 }
+        checkoutUrlEur: { type: string, maxLength: 2000 }
+        checkoutUrlUsd: { type: string, maxLength: 2000 }
+        coverImageUrl: { type: string, maxLength: 2000 }
+    StoreSettings:
+      type: object
+      required:
+        - storeName
+        - logoUrl
+        - heroBadge
+        - heroTitle
+        - heroSubtitle
+        - heroQuote
+        - contactEmail
+        - instagramUrl
+        - facebookUrl
+      properties:
+        storeName: { type: string }
+        logoUrl: { type: string }
+        heroBadge: { type: string }
+        heroTitle: { type: string }
+        heroSubtitle: { type: string }
+        heroQuote: { type: string }
+        contactEmail: { type: string }
+        instagramUrl: { type: string }
+        facebookUrl: { type: string }
+    StoreSettingsInput:
+      type: object
+      required:
+        - storeName
+        - logoUrl
+        - heroBadge
+        - heroTitle
+        - heroSubtitle
+        - heroQuote
+        - contactEmail
+        - instagramUrl
+        - facebookUrl
+      properties:
+        storeName: { type: string, maxLength: 200 }
+        logoUrl: { type: string, maxLength: 2000 }
+        heroBadge: { type: string, maxLength: 200 }
+        heroTitle: { type: string, maxLength: 300 }
+        heroSubtitle: { type: string, maxLength: 1200 }
+        heroQuote: { type: string, maxLength: 500 }
+        contactEmail: { type: string, maxLength: 320 }
+        instagramUrl: { type: string, maxLength: 2000 }
+        facebookUrl: { type: string, maxLength: 2000 }
+    AdminCredentials:
+      type: object
+      required: [password]
+      properties:
+        password: { type: string, minLength: 12, maxLength: 200 }
+    AdminSession:
+      type: object
+      required: [configured, authenticated]
+      properties:
+        configured: { type: boolean }
+        authenticated: { type: boolean }
+    AdminSummary:
+      type: object
+      required: [bookCount, orderCount, recentOrderCount]
+      properties:
+        bookCount: { type: integer }
+        orderCount: { type: integer }
+        recentOrderCount: { type: integer }
+    ShippingDetails:
+      type: object
+      required:
+        - fullName
+        - email
+        - phone
+        - address
+        - city
+        - state
+        - postalCode
+        - country
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 200 }
+        email: { type: string, format: email, maxLength: 320 }
+        phone: { type: string, minLength: 6, maxLength: 40 }
+        address: { type: string, minLength: 4, maxLength: 500 }
+        city: { type: string, minLength: 1, maxLength: 160 }
+        state: { type: string, minLength: 1, maxLength: 160 }
+        postalCode: { type: string, minLength: 1, maxLength: 40 }
+        country: { type: string, minLength: 2, maxLength: 120 }
+    CheckoutInput:
+      type: object
+      required: [bookId, currency, shipping]
+      properties:
+        bookId: { type: string, format: uuid }
+        currency: { type: string, enum: [USD, EUR] }
+        shipping:
+          $ref: "#/components/schemas/ShippingDetails"
+    CheckoutResult:
+      type: object
+      required: [orderId, redirectUrl]
+      properties:
+        orderId: { type: string, format: uuid }
+        redirectUrl: { type: string, format: uri }
+    Order:
+      type: object
+      required:
+        - id
+        - bookTitle
+        - currency
+        - amount
+        - fullName
+        - email
+        - phone
+        - address
+        - city
+        - state
+        - postalCode
+        - country
+        - createdAt
+      properties:
+        id: { type: string, format: uuid }
+        bookTitle: { type: string }
+        currency: { type: string, enum: [USD, EUR] }
+        amount: { type: number }
+        fullName: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        address: { type: string }
+        city: { type: string }
+        state: { type: string }
+        postalCode: { type: string }
+        country: { type: string }
+        createdAt: { type: string, format: date-time }
 

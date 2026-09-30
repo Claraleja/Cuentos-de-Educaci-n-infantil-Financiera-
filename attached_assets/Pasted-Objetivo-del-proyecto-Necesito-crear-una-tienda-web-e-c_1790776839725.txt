@@ -1,0 +1,91 @@
+Objetivo del proyecto: Necesito crear una tienda web e-commerce independiente (sin usar Shopify ni plataformas externas obligatorias) para vender libros infantiles impresos bajo demanda a través de Gelato. La plataforma se enfoca en Educación Financiera Infantil para leer y aprender en familia.
+
+Por favor, construye la aplicación completa con la siguiente estructura, diseño y funcionalidades:
+
+1. Enfoque de Marca, Contenido y Portada (Hero Section)
+Nombre de la tienda / Marca: Cuentos de Educación Financiera Infantil.
+
+Etiqueta superior (Badge): "EDUCACIÓN FINANCIERA INFANTIL INTERACTIVA"
+
+Título principal de la portada: "Aprender a elegir hoy para construir los sueños del mañana."
+
+Subtítulo: "Cuentos ilustrados para niños (de 6 a 10 años) y sus familias. Descubre historias interactivas donde los niños aprenden a ahorrar, diferenciar necesidades de deseos y tomar decisiones financieras conscientes junto a sus padres."
+
+Frase decorativa / Cita: "Cuentos ilustrados + Actividades en familia + Guía para padres."
+
+Sección de Beneficios (Pilares clave):
+
+Aventuras con Valores: Historias divertidas con personajes recurrentes (Aina Lucía, Anthony, Don Monedín y Papá) que enseñan decisiones cotidianas.
+
+Actividades Prácticas: Ejercicios incluidos como "El semáforo de las decisiones", "El juego de los pasillos" y "Tablas de metas de ahorro".
+
+Guía para Padres y Docentes: Herramientas para acompañar la lectura sin culpa y fomentar el diálogo positivo sobre el dinero en casa o en el aula.
+
+2. Flujo de Compra y Captura de Datos de Envío
+La web debe ser 100% independiente.
+
+Cada libro debe tener un flujo de compra claro:
+
+El usuario hace clic en el libro que desea.
+
+Formulario de Envío Obligatorio: Antes de ir al pago, el cliente debe llenar sus datos personales para la impresión y entrega en domicilio (Nombre completo, Correo electrónico, Teléfono con código de país, Dirección de envío, Ciudad, Estado/Provincia, Código Postal y País).
+
+Elección de Moneda y Botones de Pago: Una vez completado el formulario, se muestran dos botones de pago con enlaces externos independientes:
+
+Pagar en USD ($)
+
+Pagar en EUR (€)
+
+Al hacer clic en pagar, los datos del formulario deben guardarse automáticamente en la base de datos local antes de redirigir al enlace de pago.
+
+3. Panel de Administración Independiente (Gestión Total sin Programar)
+Crea una sección de administración (protegida por contraseña o mediante un archivo data/books.json y data/settings.json) donde yo pueda gestionar la tienda fácilmente:
+
+Gestión de Libros (Agregar, Editar, Eliminar):
+
+Título y Subtítulo.
+
+Autor(a).
+
+Descripción corta y Descripción completa.
+
+Edad recomendada y Número de páginas.
+
+Precio en EUR (€) y Precio en USD ($).
+
+URL / Enlace del botón de pago en EUR.
+
+URL / Enlace del botón de pago en USD.
+
+Imagen de portada (subir archivo o pegar URL).
+
+Personalización de Marca y Ajustes:
+
+Cambiar la URL o imagen del Logo.
+
+Editar el Nombre de la tienda, los textos principales de la portada y frases destacadas.
+
+Configurar enlaces a redes sociales y correo electrónico de contacto del pie de página.
+
+Gestión de Envíos y Exportación a Gelato:
+
+Listado / Registro de todas las órdenes recopiladas en la web.
+
+Botón para "Exportar Pedidos a CSV / Excel" con el formato exacto de campos requeridos por Gelato para la impresión y envío a domicilio (Nombre, Email, Teléfono, Dirección, Ciudad, Estado, Código Postal, País, Libro solicitado y Moneda).
+
+4. Libro Inicial de Ejemplo para Cargar en la Tienda
+Configura el primer producto en la base de datos con la siguiente información:
+
+Título: El Mercado de los Deseos
+
+Subtítulo: Una aventura para aprender a elegir, ahorrar y cumplir nuestros sueños.
+
+Autora: Claricel Rodríguez Asien
+
+Edad recomendada: 6 a 10 años (Para leer en familia o en el aula).
+
+Páginas: 30 páginas ilustradas + Cuaderno de actividades.
+
+Descripción: "Acompaña a Aina Lucía y Anthony junto a Don Monedín en una aventura donde descubrirán el pasillo de las necesidades y el pasillo de los deseos. Incluye diario de decisiones, el semáforo de las compras y 8 actividades interactivas para realizar en familia."
+
+Por favor, genera el código completo, configura la base de datos interna y confirma cuando esté listo para probar.
