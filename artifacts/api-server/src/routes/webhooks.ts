@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import { db, ordersTable } from "@workspace/db";
 import { logger } from "../lib/logger";
@@ -76,10 +76,42 @@ router.post("/webhooks/stripe", async (req: Request, res): Promise<void> => {
   res.json({ received: true });
 });
 
+type Flat = Record<string, unknown>;
+
+function asRecord(value: unknown): Flat {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Flat) : {};
+}
+
+function firstString(sources: Flat[], keys: string[]): string {
+  for (const source of sources) {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === "string" && value.trim()) return value.trim();
+      if (typeof value === "number") return String(value);
+    }
+  }
+  return "";
+}
+
+const SUCCESS_STATES = new Set([
+  "paid", "completed", "complete", "success", "succeeded", "successful", "ok",
+  "approved", "charged", "captured", "confirmed", "settled",
+]);
+
 /**
- * Confirmación genérica (PayPal, Zapier, Make, otro proveedor…):
- * POST /api/webhooks/payment-confirmed
- *   Authorization: Bearer <PAYMENT_WEBHOOK_SECRET>   {"orderId": "<uuid>"}
+ * Confirmación de pago GENÉRICA: sirve para cualquier proveedor (Tropipay, PayPal,
+ * Revolut, Wise, Zapier/Make/n8n leyendo el aviso del banco…).
+ *
+ *   POST /api/webhooks/payment-confirmed
+ *   Secreto (variable PAYMENT_WEBHOOK_SECRET), en una de estas formas:
+ *     · cabecera  Authorization: Bearer <secreto>   (o x-webhook-secret)
+ *     · parámetro ?secret=<secreto>  (para proveedores que no permiten cabeceras)
+ *
+ *   Cuerpo JSON — el pedido se identifica por UNO de estos dos caminos:
+ *     1) id del pedido:  orderId | order_id | reference | client_reference_id
+ *     2) email del cliente + importe:  email|clientEmail|customer_email  +  amount|originalCurrencyAmount|total
+ *        (importe en unidades o en céntimos; currency opcional)
+ *   Si el cuerpo trae un estado (status/state/payment_status) distinto de pagado, se ignora.
  */
 router.post("/webhooks/payment-confirmed", async (req, res): Promise<void> => {
   const secret = process.env.PAYMENT_WEBHOOK_SECRET;
@@ -88,15 +120,69 @@ router.post("/webhooks/payment-confirmed", async (req, res): Promise<void> => {
     return;
   }
   const bearer = (req.header("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  const provided = req.header("x-webhook-secret") ?? bearer;
+  const query = typeof req.query.secret === "string" ? req.query.secret : "";
+  const provided = req.header("x-webhook-secret") || bearer || query;
   if (!provided || !safeEqual(provided, secret)) {
     res.status(401).json({ error: "No autorizado." });
     return;
   }
-  const result = await confirm((req.body as { orderId?: unknown } | undefined)?.orderId);
-  if (result === "invalid") res.status(400).json({ error: "orderId no válido." });
-  else if (result === "unknown") res.status(404).json({ error: "Pedido no encontrado." });
-  else res.json({ received: true });
+
+  const body = asRecord(req.body);
+  const sources = [body, asRecord(body.data), asRecord(asRecord(body.data).object)];
+
+  const state = firstString(sources, ["status", "state", "payment_status", "paymentStatus"]).toLowerCase();
+  if (state && !SUCCESS_STATES.has(state)) {
+    logger.info({ state }, "Aviso de pago ignorado: estado no pagado");
+    res.json({ received: true, ignored: "estado no pagado" });
+    return;
+  }
+
+  // 1) Por id de pedido.
+  const reference = firstString(sources, ["orderId", "order_id", "reference", "client_reference_id", "externalReference"]);
+  if (UUID.test(reference)) {
+    const result = await confirm(reference);
+    if (result === "unknown") res.status(404).json({ error: "Pedido no encontrado." });
+    else res.json({ received: true });
+    return;
+  }
+
+  // 2) Por email + importe (el enlace de pago no puede llevar nuestra referencia).
+  const email = (
+    firstString(sources, ["email", "clientEmail", "customer_email", "payerEmail"]) ||
+    firstString([asRecord(body.client), asRecord(body.customer)], ["email"])
+  ).toLowerCase();
+  const rawAmount = firstString(sources, ["amount", "originalCurrencyAmount", "total", "value"]);
+  const amount = Number(rawAmount.replace(",", "."));
+  if (!email || !rawAmount || !Number.isFinite(amount) || amount <= 0) {
+    res.status(400).json({ error: "Envía orderId, o bien email + amount del cliente." });
+    return;
+  }
+  const currency = firstString(sources, ["currency", "originalCurrency"]).toUpperCase();
+
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const pending = await db
+    .select()
+    .from(ordersTable)
+    .where(and(eq(ordersTable.paymentStatus, "pending"), gte(ordersTable.createdAt, since)));
+  const close = (a: number, b: number) => Math.abs(a - b) < 0.005;
+  const matches = pending.filter(
+    (order) =>
+      order.email.trim().toLowerCase() === email &&
+      (close(order.amount, amount) || close(order.amount, amount / 100)) &&
+      (!currency || order.currency === currency),
+  );
+  if (matches.length === 0) {
+    res.status(404).json({ error: "No hay un pedido pendiente que coincida." });
+    return;
+  }
+  if (matches.length > 1) {
+    // Ambiguo: mejor no imprimir nada y que lo confirmes tú desde Pedidos.
+    logger.warn({ count: matches.length }, "Aviso de pago ambiguo: varios pedidos coinciden");
+    res.status(409).json({ error: "Varios pedidos coinciden; confirma el pedido manualmente." });
+    return;
+  }
+  await handlePaymentConfirmed(matches[0].id);
+  res.json({ received: true });
 });
 
 export default router;

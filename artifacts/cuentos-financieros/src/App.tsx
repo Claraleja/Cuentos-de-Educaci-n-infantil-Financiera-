@@ -462,10 +462,10 @@ function AdminIntegrations() {
   return <AdminShell current="integrations"><div className="admin-page-heading"><div><span className="section-kicker">IMPRESIÓN BAJO DEMANDA</span><h1>Integraciones<br /><em>con imprentas.</em></h1><p>Conecta tu imprenta para que cada pedido pagado se fabrique y envíe solo.</p></div></div>
     {query.isLoading ? <LoadingRows count={4} /> : query.isError ? <div className="admin-panel"><Notice>{errorText(query.error)}</Notice><Button kind="quiet" onClick={() => query.refetch()}>Volver a cargar</Button></div> : <>
       {query.data?.map((provider) => <ProviderCard key={provider.id} provider={provider} />)}
-      <section className="admin-panel webhook-help"><div className="settings-section-head"><span className="settings-number"><Truck size={16} /></span><div><h2>Cómo se confirma un pago</h2><p>El envío automático se dispara cuando tu pasarela avisa al servidor.</p></div></div>
-        <p><strong>Stripe:</strong> crea un webhook con el evento <code>checkout.session.completed</code> apuntando a <code>{origin}/api/webhooks/stripe</code> y guarda su secreto en la variable <code>STRIPE_WEBHOOK_SECRET</code>.</p>
-        <p><strong>Otra pasarela:</strong> haz un POST a <code>{origin}/api/webhooks/payment-confirmed</code> con la cabecera <code>Authorization: Bearer &lt;PAYMENT_WEBHOOK_SECRET&gt;</code> y el cuerpo <code>{'{"orderId":"…"}'}</code>.</p>
-        <p>Mientras tanto, en <Link href="/admin/orders" className="text-link">Pedidos</Link> puedes enviar cualquier pedido a mano.</p></section></>}
+      <section className="admin-panel webhook-help"><div className="settings-section-head"><span className="settings-number"><Truck size={16} /></span><div><h2>Cómo se confirma un pago</h2><p>Puedes poner enlaces de pago de cualquier proveedor (Tropipay, PayPal, Stripe…). El envío automático se dispara cuando se confirma el pago:</p></div></div>
+        <p><strong>Cualquier proveedor:</strong> haz un POST a <code>{origin}/api/webhooks/payment-confirmed</code> con el secreto de la variable <code>PAYMENT_WEBHOOK_SECRET</code> (cabecera <code>Authorization: Bearer …</code>, o <code>?secret=…</code> en la URL si el proveedor no permite cabeceras). El cuerpo puede llevar <code>{'{"orderId":"…"}'}</code> o bien el <code>email</code> y el <code>amount</code> del cliente. Sirve para el aviso de la propia pasarela o para Zapier/Make/n8n.</p>
+        <p><strong>Stripe:</strong> webhook <code>checkout.session.completed</code> hacia <code>{origin}/api/webhooks/stripe</code> con <code>STRIPE_WEBHOOK_SECRET</code>.</p>
+        <p><strong>Sin automatización:</strong> en <Link href="/admin/orders" className="text-link">Pedidos</Link> pulsa «Marcar pagado y enviar» cuando veas el cobro.</p></section></>}
   </AdminShell>;
 }
 
