@@ -2,6 +2,7 @@ import {
   boolean,
   doublePrecision,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -22,6 +23,15 @@ export const booksTable = pgTable("store_books", {
   checkoutUrlEur: text("checkout_url_eur").notNull().default(""),
   checkoutUrlUsd: text("checkout_url_usd").notNull().default(""),
   coverImageUrl: text("cover_image_url").notNull().default(""),
+  // Códigos de producto por imprenta: { gelato: "<Product UID>", printify: "..." }.
+  printProductUids: jsonb("print_product_uids")
+    .$type<Record<string, string>>()
+    .notNull()
+    .default({}),
+  // URL pública del PDF listo para imprimir (portada + interior).
+  printFileUrl: text("print_file_url").notNull().default(""),
+  // Total de páginas para la imprenta (0 = usar "pages").
+  printPageCount: integer("print_page_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -73,7 +83,32 @@ export const ordersTable = pgTable("store_orders", {
   state: text("state").notNull(),
   postalCode: text("postal_code").notNull(),
   country: text("country").notNull(),
+  // pending | paid
+  paymentStatus: text("payment_status").notNull().default("pending"),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  // Imprenta usada y estado del envío: none | submitting | submitted | failed
+  printProvider: text("print_provider").notNull().default(""),
+  printStatus: text("print_status").notNull().default("none"),
+  printExternalId: text("print_external_id").notNull().default(""),
+  printError: text("print_error").notNull().default(""),
+  printSubmittedAt: timestamp("print_submitted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+});
+
+// Una fila por imprenta (gelato, printify…). Añadir otra imprenta no requiere
+// cambiar el esquema: sus credenciales y ajustes viven en estas columnas.
+export const printProviderConfigsTable = pgTable("store_print_providers", {
+  provider: text("provider").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  autoSubmit: boolean("auto_submit").notNull().default(true),
+  // "draft" crea borradores sin imprimir ni cobrar; "live" produce de verdad.
+  orderMode: text("order_mode").notNull().default("draft"),
+  // JSON cifrado (AES-256-GCM) con las credenciales, p. ej. { apiKey }.
+  credentialsEncrypted: text("credentials_encrypted").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });

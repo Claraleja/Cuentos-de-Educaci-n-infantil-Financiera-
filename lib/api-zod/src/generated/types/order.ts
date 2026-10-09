@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { OrderCurrency } from './orderCurrency';
+import type { OrderPaymentStatus } from './orderPaymentStatus';
+import type { OrderPrintStatus } from './orderPrintStatus';
 
 export interface Order {
   id: string;
@@ -20,5 +22,12 @@ export interface Order {
   state: string;
   postalCode: string;
   country: string;
+  paymentStatus: OrderPaymentStatus;
+  paidAt?: Date;
+  printProvider: string;
+  printStatus: OrderPrintStatus;
+  printExternalId: string;
+  printError: string;
+  printSubmittedAt?: Date;
   createdAt: Date;
 }

@@ -29,8 +29,14 @@ import type {
   CheckoutResult,
   HealthStatus,
   Order,
+  PrintProvider,
+  PrintProviderTestResult,
+  PrintProviderUpdate,
+  StoreBook,
   StoreSettings,
-  StoreSettingsInput
+  StoreSettingsInput,
+  SubmitPrintBody,
+  SubmitPrintResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -149,9 +155,9 @@ export const getGetStoreBooksUrl = () => {
 /**
  * @summary List active books
  */
-export const getStoreBooks = async ( options?: Parameters<typeof customFetch>[1]): Promise<Book[]> => {
+export const getStoreBooks = async ( options?: Parameters<typeof customFetch>[1]): Promise<StoreBook[]> => {
 
-  return customFetch<Book[]>(getGetStoreBooksUrl(),
+  return customFetch<StoreBook[]>(getGetStoreBooksUrl(),
   {
     ...options,
     method: 'GET'
@@ -1430,4 +1436,333 @@ export function useExportAdminOrders<TData = Awaited<ReturnType<typeof exportAdm
 
 
 
+
+export const getGetPrintProvidersUrl = () => {
+
+
+
+
+  return `/api/admin/print-providers`
+}
+
+/**
+ * @summary List print-on-demand providers with their configuration status
+ */
+export const getPrintProviders = async ( options?: Parameters<typeof customFetch>[1]): Promise<PrintProvider[]> => {
+
+  return customFetch<PrintProvider[]>(getGetPrintProvidersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPrintProvidersQueryKey = () => {
+    return [
+    `/api/admin/print-providers`
+    ] as const;
+    }
+
+
+export const getGetPrintProvidersQueryOptions = <TData = Awaited<ReturnType<typeof getPrintProviders>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrintProviders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPrintProvidersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPrintProviders>>> = ({ signal }) => getPrintProviders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPrintProviders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPrintProvidersQueryResult = NonNullable<Awaited<ReturnType<typeof getPrintProviders>>>
+export type GetPrintProvidersQueryError = ErrorType<void>
+
+
+/**
+ * @summary List print-on-demand providers with their configuration status
+ */
+
+export function useGetPrintProviders<TData = Awaited<ReturnType<typeof getPrintProviders>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrintProviders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPrintProvidersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdatePrintProviderUrl = (provider: string,) => {
+
+
+
+
+  return `/api/admin/print-providers/${provider}`
+}
+
+/**
+ * @summary Save credentials and settings of a print provider
+ */
+export const updatePrintProvider = async (provider: string,
+    printProviderUpdate: PrintProviderUpdate, options?: Parameters<typeof customFetch>[1]): Promise<PrintProvider> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PrintProvider>(getUpdatePrintProviderUrl(provider),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(printProviderUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePrintProviderMutationKey = () => ['updatePrintProvider'] as const;
+
+export const getUpdatePrintProviderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePrintProvider>>, TError,UpdatePrintProviderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePrintProvider>>, TError,UpdatePrintProviderMutationVariables, TContext> => {
+
+const mutationKey = getUpdatePrintProviderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePrintProvider>>, UpdatePrintProviderMutationVariables> = (props) => {
+          const {provider,data} = props ?? {};
+
+          return  updatePrintProvider(provider,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePrintProviderMutationResult = NonNullable<Awaited<ReturnType<typeof updatePrintProvider>>>
+    export type UpdatePrintProviderMutationBody = BodyType<PrintProviderUpdate>
+    export type UpdatePrintProviderMutationError = ErrorType<void>
+    export type UpdatePrintProviderMutationVariables = {provider: string;data: BodyType<PrintProviderUpdate>}
+
+    /**
+ * @summary Save credentials and settings of a print provider
+ */
+export const useUpdatePrintProvider = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePrintProvider>>, TError,UpdatePrintProviderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePrintProvider>>,
+        TError,
+        UpdatePrintProviderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdatePrintProviderMutationOptions(options));
+    }
+
+export const getTestPrintProviderUrl = (provider: string,) => {
+
+
+
+
+  return `/api/admin/print-providers/${provider}/test`
+}
+
+/**
+ * @summary Check that the saved credentials work
+ */
+export const testPrintProvider = async (provider: string, options?: Parameters<typeof customFetch>[1]): Promise<PrintProviderTestResult> => {
+
+  return customFetch<PrintProviderTestResult>(getTestPrintProviderUrl(provider),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getTestPrintProviderMutationKey = () => ['testPrintProvider'] as const;
+
+export const getTestPrintProviderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testPrintProvider>>, TError,TestPrintProviderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof testPrintProvider>>, TError,TestPrintProviderMutationVariables, TContext> => {
+
+const mutationKey = getTestPrintProviderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof testPrintProvider>>, TestPrintProviderMutationVariables> = (props) => {
+          const {provider} = props ?? {};
+
+          return  testPrintProvider(provider,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TestPrintProviderMutationResult = NonNullable<Awaited<ReturnType<typeof testPrintProvider>>>
+
+    export type TestPrintProviderMutationError = ErrorType<void>
+    export type TestPrintProviderMutationVariables = {provider: string}
+
+    /**
+ * @summary Check that the saved credentials work
+ */
+export const useTestPrintProvider = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testPrintProvider>>, TError,TestPrintProviderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof testPrintProvider>>,
+        TError,
+        TestPrintProviderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTestPrintProviderMutationOptions(options));
+    }
+
+export const getSubmitOrderToPrinterUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/orders/${id}/print`
+}
+
+/**
+ * @summary Send (or retry sending) an order to the active print provider
+ */
+export const submitOrderToPrinter = async (id: string,
+    submitPrintBody: SubmitPrintBody, options?: Parameters<typeof customFetch>[1]): Promise<SubmitPrintResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SubmitPrintResult>(getSubmitOrderToPrinterUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(submitPrintBody)
+  }
+);}
+
+
+
+
+
+export const getSubmitOrderToPrinterMutationKey = () => ['submitOrderToPrinter'] as const;
+
+export const getSubmitOrderToPrinterMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitOrderToPrinter>>, TError,SubmitOrderToPrinterMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitOrderToPrinter>>, TError,SubmitOrderToPrinterMutationVariables, TContext> => {
+
+const mutationKey = getSubmitOrderToPrinterMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitOrderToPrinter>>, SubmitOrderToPrinterMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  submitOrderToPrinter(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitOrderToPrinterMutationResult = NonNullable<Awaited<ReturnType<typeof submitOrderToPrinter>>>
+    export type SubmitOrderToPrinterMutationBody = BodyType<SubmitPrintBody>
+    export type SubmitOrderToPrinterMutationError = ErrorType<void>
+    export type SubmitOrderToPrinterMutationVariables = {id: string;data: BodyType<SubmitPrintBody>}
+
+    /**
+ * @summary Send (or retry sending) an order to the active print provider
+ */
+export const useSubmitOrderToPrinter = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitOrderToPrinter>>, TError,SubmitOrderToPrinterMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitOrderToPrinter>>,
+        TError,
+        SubmitOrderToPrinterMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitOrderToPrinterMutationOptions(options));
+    }
 

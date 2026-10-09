@@ -38,6 +38,7 @@ import {
   requireAdmin,
 } from "../lib/admin-auth";
 import { DEFAULT_SETTINGS, ensureStoreDefaults } from "../lib/store-data";
+import { mapOrder } from "../lib/map-order";
 
 const router: IRouter = Router();
 
@@ -46,13 +47,6 @@ function mapBook(book: typeof booksTable.$inferSelect) {
     ...book,
     createdAt: book.createdAt.toISOString(),
     updatedAt: book.updatedAt.toISOString(),
-  };
-}
-
-function mapOrder(order: typeof ordersTable.$inferSelect) {
-  return {
-    ...order,
-    createdAt: order.createdAt.toISOString(),
   };
 }
 
@@ -71,12 +65,27 @@ function safeHttpUrl(value: string): boolean {
 }
 
 function validBookUrls(
-  data: { checkoutUrlEur: string; checkoutUrlUsd: string; coverImageUrl: string },
+  data: {
+    checkoutUrlEur: string;
+    checkoutUrlUsd: string;
+    coverImageUrl: string;
+    printFileUrl?: string;
+  },
 ): boolean {
   return (
     safeHttpUrl(data.checkoutUrlEur) &&
     safeHttpUrl(data.checkoutUrlUsd) &&
-    safeHttpUrl(data.coverImageUrl)
+    safeHttpUrl(data.coverImageUrl) &&
+    safeHttpUrl(data.printFileUrl ?? "")
+  );
+}
+
+// Recorta espacios y descarta códigos de producto vacíos.
+function cleanPrintUids(uids: Record<string, string> | undefined): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(uids ?? {})
+      .map(([provider, uid]) => [provider, uid.trim()] as const)
+      .filter(([, uid]) => uid),
   );
 }
 
@@ -216,7 +225,10 @@ router.post("/admin/books", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  const [book] = await db.insert(booksTable).values(parsed.data).returning();
+  const [book] = await db
+    .insert(booksTable)
+    .values({ ...parsed.data, printProductUids: cleanPrintUids(parsed.data.printProductUids) })
+    .returning();
   res.status(201).json(CreateBookResponse.parse(mapBook(book)));
 });
 
@@ -238,7 +250,12 @@ router.patch("/admin/books/:id", requireAdmin, async (req, res): Promise<void> =
 
   const [book] = await db
     .update(booksTable)
-    .set(parsed.data)
+    .set({
+      ...parsed.data,
+      ...(parsed.data.printProductUids !== undefined
+        ? { printProductUids: cleanPrintUids(parsed.data.printProductUids) }
+        : {}),
+    })
     .where(eq(booksTable.id, params.data.id))
     .returning();
   if (!book) {

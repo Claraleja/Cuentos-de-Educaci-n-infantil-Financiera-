@@ -43,7 +43,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Book"
+                  $ref: "#/components/schemas/StoreBook"
   /settings:
     get:
       operationId: getStoreSettings
@@ -299,6 +299,97 @@ paths:
                 type: string
         "401":
           description: Administrator authentication required
+  /admin/print-providers:
+    get:
+      operationId: getPrintProviders
+      tags: [admin]
+      summary: List print-on-demand providers with their configuration status
+      responses:
+        "200":
+          description: Providers (secrets are never returned)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PrintProvider"
+        "401":
+          description: Administrator authentication required
+  /admin/print-providers/{provider}:
+    put:
+      operationId: updatePrintProvider
+      tags: [admin]
+      summary: Save credentials and settings of a print provider
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrintProviderUpdate"
+      responses:
+        "200":
+          description: Updated provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrintProvider"
+        "401":
+          description: Administrator authentication required
+        "404":
+          description: Unknown provider
+  /admin/print-providers/{provider}/test:
+    post:
+      operationId: testPrintProvider
+      tags: [admin]
+      summary: Check that the saved credentials work
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrintProviderTestResult"
+        "401":
+          description: Administrator authentication required
+        "404":
+          description: Unknown provider
+  /admin/orders/{id}/print:
+    post:
+      operationId: submitOrderToPrinter
+      tags: [admin]
+      summary: Send (or retry sending) an order to the active print provider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitPrintBody"
+      responses:
+        "200":
+          description: Outcome of the submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitPrintResult"
+        "401":
+          description: Administrator authentication required
+        "404":
+          description: Order not found
 components:
   schemas:
     HealthStatus:
@@ -308,7 +399,7 @@ components:
           type: string
       required:
         - status
-    Book:
+    StoreBook:
       type: object
       required:
         - id
@@ -342,6 +433,48 @@ components:
         coverImageUrl: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    Book:
+      type: object
+      required:
+        - id
+        - title
+        - subtitle
+        - author
+        - shortDescription
+        - description
+        - recommendedAge
+        - pages
+        - priceEur
+        - priceUsd
+        - checkoutUrlEur
+        - checkoutUrlUsd
+        - coverImageUrl
+        - printProductUids
+        - printFileUrl
+        - printPageCount
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        subtitle: { type: string }
+        author: { type: string }
+        shortDescription: { type: string }
+        description: { type: string }
+        recommendedAge: { type: string }
+        pages: { type: integer }
+        priceEur: { type: number }
+        priceUsd: { type: number }
+        checkoutUrlEur: { type: string }
+        checkoutUrlUsd: { type: string }
+        coverImageUrl: { type: string }
+        printProductUids:
+          type: object
+          additionalProperties: { type: string }
+        printFileUrl: { type: string }
+        printPageCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     BookInput:
       type: object
       required:
@@ -370,6 +503,11 @@ components:
         checkoutUrlEur: { type: string, maxLength: 2000 }
         checkoutUrlUsd: { type: string, maxLength: 2000 }
         coverImageUrl: { type: string, maxLength: 2000 }
+        printProductUids:
+          type: object
+          additionalProperties: { type: string, maxLength: 300 }
+        printFileUrl: { type: string, maxLength: 2000 }
+        printPageCount: { type: integer, minimum: 0, maximum: 5000 }
     StoreSettings:
       type: object
       required:
@@ -481,6 +619,11 @@ components:
         - state
         - postalCode
         - country
+        - paymentStatus
+        - printProvider
+        - printStatus
+        - printExternalId
+        - printError
         - createdAt
       properties:
         id: { type: string, format: uuid }
@@ -495,5 +638,73 @@ components:
         state: { type: string }
         postalCode: { type: string }
         country: { type: string }
+        paymentStatus: { type: string, enum: [pending, paid] }
+        paidAt: { type: string, format: date-time }
+        printProvider: { type: string }
+        printStatus: { type: string, enum: [none, submitting, draft, submitted, failed, skipped] }
+        printExternalId: { type: string }
+        printError: { type: string }
+        printSubmittedAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
-
+    PrintFieldDef:
+      type: object
+      required: [key, label]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        help: { type: string }
+        placeholder: { type: string }
+    PrintCredentialField:
+      type: object
+      required: [key, label, configured, hint]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        help: { type: string }
+        placeholder: { type: string }
+        configured: { type: boolean }
+        hint: { type: string, description: "Últimos caracteres de la clave guardada, nunca la clave completa" }
+    PrintProvider:
+      type: object
+      required: [id, label, docsUrl, enabled, autoSubmit, orderMode, credentials, productField]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        docsUrl: { type: string }
+        enabled: { type: boolean }
+        autoSubmit: { type: boolean }
+        orderMode: { type: string, enum: [draft, live] }
+        credentials:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrintCredentialField"
+        productField:
+          $ref: "#/components/schemas/PrintFieldDef"
+    PrintProviderUpdate:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        autoSubmit: { type: boolean }
+        orderMode: { type: string, enum: [draft, live] }
+        credentials:
+          type: object
+          description: "Clave ausente = sin cambios; texto vacío = borrar; texto = guardar"
+          additionalProperties: { type: string, maxLength: 500 }
+    PrintProviderTestResult:
+      type: object
+      required: [ok, message]
+      properties:
+        ok: { type: boolean }
+        message: { type: string }
+    SubmitPrintBody:
+      type: object
+      properties:
+        markPaid: { type: boolean }
+    SubmitPrintResult:
+      type: object
+      required: [status, message, order]
+      properties:
+        status: { type: string, enum: [draft, submitted, failed, skipped, busy, unpaid, not_found] }
+        message: { type: string }
+        order:
+          $ref: "#/components/schemas/Order"

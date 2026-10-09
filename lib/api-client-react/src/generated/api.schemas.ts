@@ -9,7 +9,7 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface Book {
+export interface StoreBook {
   id: string;
   title: string;
   subtitle: string;
@@ -26,6 +26,31 @@ export interface Book {
   createdAt: string;
   updatedAt: string;
 }
+
+export type BookPrintProductUids = {[key: string]: string};
+
+export interface Book {
+  id: string;
+  title: string;
+  subtitle: string;
+  author: string;
+  shortDescription: string;
+  description: string;
+  recommendedAge: string;
+  pages: number;
+  priceEur: number;
+  priceUsd: number;
+  checkoutUrlEur: string;
+  checkoutUrlUsd: string;
+  coverImageUrl: string;
+  printProductUids: BookPrintProductUids;
+  printFileUrl: string;
+  printPageCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BookInputPrintProductUids = {[key: string]: string};
 
 export interface BookInput {
   /**
@@ -58,6 +83,14 @@ export interface BookInput {
   checkoutUrlUsd: string;
   /** @maxLength 2000 */
   coverImageUrl: string;
+  printProductUids?: BookInputPrintProductUids;
+  /** @maxLength 2000 */
+  printFileUrl?: string;
+  /**
+     * @minimum 0
+     * @maximum 5000
+     */
+  printPageCount?: number;
 }
 
 export interface StoreSettings {
@@ -179,6 +212,26 @@ export const OrderCurrency = {
   EUR: 'EUR',
 } as const;
 
+export type OrderPaymentStatus = typeof OrderPaymentStatus[keyof typeof OrderPaymentStatus];
+
+
+export const OrderPaymentStatus = {
+  pending: 'pending',
+  paid: 'paid',
+} as const;
+
+export type OrderPrintStatus = typeof OrderPrintStatus[keyof typeof OrderPrintStatus];
+
+
+export const OrderPrintStatus = {
+  none: 'none',
+  submitting: 'submitting',
+  draft: 'draft',
+  submitted: 'submitted',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
 export interface Order {
   id: string;
   bookTitle: string;
@@ -192,6 +245,98 @@ export interface Order {
   state: string;
   postalCode: string;
   country: string;
+  paymentStatus: OrderPaymentStatus;
+  paidAt?: string;
+  printProvider: string;
+  printStatus: OrderPrintStatus;
+  printExternalId: string;
+  printError: string;
+  printSubmittedAt?: string;
   createdAt: string;
+}
+
+export interface PrintFieldDef {
+  key: string;
+  label: string;
+  help?: string;
+  placeholder?: string;
+}
+
+export interface PrintCredentialField {
+  key: string;
+  label: string;
+  help?: string;
+  placeholder?: string;
+  configured: boolean;
+  /** Últimos caracteres de la clave guardada, nunca la clave completa */
+  hint: string;
+}
+
+export type PrintProviderOrderMode = typeof PrintProviderOrderMode[keyof typeof PrintProviderOrderMode];
+
+
+export const PrintProviderOrderMode = {
+  draft: 'draft',
+  live: 'live',
+} as const;
+
+export interface PrintProvider {
+  id: string;
+  label: string;
+  docsUrl: string;
+  enabled: boolean;
+  autoSubmit: boolean;
+  orderMode: PrintProviderOrderMode;
+  credentials: PrintCredentialField[];
+  productField: PrintFieldDef;
+}
+
+export type PrintProviderUpdateOrderMode = typeof PrintProviderUpdateOrderMode[keyof typeof PrintProviderUpdateOrderMode];
+
+
+export const PrintProviderUpdateOrderMode = {
+  draft: 'draft',
+  live: 'live',
+} as const;
+
+/**
+ * Clave ausente = sin cambios; texto vacío = borrar; texto = guardar
+ */
+export type PrintProviderUpdateCredentials = {[key: string]: string};
+
+export interface PrintProviderUpdate {
+  enabled?: boolean;
+  autoSubmit?: boolean;
+  orderMode?: PrintProviderUpdateOrderMode;
+  /** Clave ausente = sin cambios; texto vacío = borrar; texto = guardar */
+  credentials?: PrintProviderUpdateCredentials;
+}
+
+export interface PrintProviderTestResult {
+  ok: boolean;
+  message: string;
+}
+
+export interface SubmitPrintBody {
+  markPaid?: boolean;
+}
+
+export type SubmitPrintResultStatus = typeof SubmitPrintResultStatus[keyof typeof SubmitPrintResultStatus];
+
+
+export const SubmitPrintResultStatus = {
+  draft: 'draft',
+  submitted: 'submitted',
+  failed: 'failed',
+  skipped: 'skipped',
+  busy: 'busy',
+  unpaid: 'unpaid',
+  not_found: 'not_found',
+} as const;
+
+export interface SubmitPrintResult {
+  status: SubmitPrintResultStatus;
+  message: string;
+  order: Order;
 }
 
