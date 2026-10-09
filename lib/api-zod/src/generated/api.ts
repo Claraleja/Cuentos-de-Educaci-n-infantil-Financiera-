@@ -183,6 +183,9 @@ export const GetAdminBooksResponseItem = zod.object({
   "checkoutUrlEur": zod.string(),
   "checkoutUrlUsd": zod.string(),
   "coverImageUrl": zod.string(),
+  "printProductUids": zod.record(zod.string(), zod.string()),
+  "printFileUrl": zod.string(),
+  "printPageCount": zod.number().int(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -216,6 +219,13 @@ export const createBookBodyCheckoutUrlUsdMax = 2000;
 
 export const createBookBodyCoverImageUrlMax = 2000;
 
+export const createBookBodyPrintProductUidsMaxOne = 300;
+
+export const createBookBodyPrintFileUrlMax = 2000;
+
+export const createBookBodyPrintPageCountMin = 0;
+export const createBookBodyPrintPageCountMax = 5000;
+
 
 
 export const CreateBookBody = zod.object({
@@ -230,7 +240,10 @@ export const CreateBookBody = zod.object({
   "priceUsd": zod.number().min(createBookBodyPriceUsdMin),
   "checkoutUrlEur": zod.string().max(createBookBodyCheckoutUrlEurMax),
   "checkoutUrlUsd": zod.string().max(createBookBodyCheckoutUrlUsdMax),
-  "coverImageUrl": zod.string().max(createBookBodyCoverImageUrlMax)
+  "coverImageUrl": zod.string().max(createBookBodyCoverImageUrlMax),
+  "printProductUids": zod.record(zod.string(), zod.string().max(createBookBodyPrintProductUidsMaxOne)).optional(),
+  "printFileUrl": zod.string().max(createBookBodyPrintFileUrlMax).optional(),
+  "printPageCount": zod.number().int().min(createBookBodyPrintPageCountMin).max(createBookBodyPrintPageCountMax).optional()
 })
 
 export const CreateBookResponse = zod.object({
@@ -247,6 +260,9 @@ export const CreateBookResponse = zod.object({
   "checkoutUrlEur": zod.string(),
   "checkoutUrlUsd": zod.string(),
   "coverImageUrl": zod.string(),
+  "printProductUids": zod.record(zod.string(), zod.string()),
+  "printFileUrl": zod.string(),
+  "printPageCount": zod.number().int(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -283,6 +299,13 @@ export const updateBookBodyCheckoutUrlUsdMax = 2000;
 
 export const updateBookBodyCoverImageUrlMax = 2000;
 
+export const updateBookBodyPrintProductUidsMaxOne = 300;
+
+export const updateBookBodyPrintFileUrlMax = 2000;
+
+export const updateBookBodyPrintPageCountMin = 0;
+export const updateBookBodyPrintPageCountMax = 5000;
+
 
 
 export const UpdateBookBody = zod.object({
@@ -297,7 +320,10 @@ export const UpdateBookBody = zod.object({
   "priceUsd": zod.number().min(updateBookBodyPriceUsdMin),
   "checkoutUrlEur": zod.string().max(updateBookBodyCheckoutUrlEurMax),
   "checkoutUrlUsd": zod.string().max(updateBookBodyCheckoutUrlUsdMax),
-  "coverImageUrl": zod.string().max(updateBookBodyCoverImageUrlMax)
+  "coverImageUrl": zod.string().max(updateBookBodyCoverImageUrlMax),
+  "printProductUids": zod.record(zod.string(), zod.string().max(updateBookBodyPrintProductUidsMaxOne)).optional(),
+  "printFileUrl": zod.string().max(updateBookBodyPrintFileUrlMax).optional(),
+  "printPageCount": zod.number().int().min(updateBookBodyPrintPageCountMin).max(updateBookBodyPrintPageCountMax).optional()
 })
 
 export const UpdateBookResponse = zod.object({
@@ -314,6 +340,9 @@ export const UpdateBookResponse = zod.object({
   "checkoutUrlEur": zod.string(),
   "checkoutUrlUsd": zod.string(),
   "coverImageUrl": zod.string(),
+  "printProductUids": zod.record(zod.string(), zod.string()),
+  "printFileUrl": zod.string(),
+  "printPageCount": zod.number().int(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -409,6 +438,13 @@ export const GetAdminOrdersResponseItem = zod.object({
   "state": zod.string(),
   "postalCode": zod.string(),
   "country": zod.string(),
+  "paymentStatus": zod.enum(['pending', 'paid']),
+  "paidAt": zod.coerce.date().optional(),
+  "printProvider": zod.string(),
+  "printStatus": zod.enum(['none', 'submitting', 'draft', 'submitted', 'failed', 'skipped']),
+  "printExternalId": zod.string(),
+  "printError": zod.string(),
+  "printSubmittedAt": zod.coerce.date().optional(),
   "createdAt": zod.coerce.date()
 })
 export const GetAdminOrdersResponse = zod.array(GetAdminOrdersResponseItem)
@@ -418,5 +454,127 @@ export const GetAdminOrdersResponse = zod.array(GetAdminOrdersResponseItem)
  * @summary Export captured orders as Gelato-ready CSV
  */
 export const ExportAdminOrdersResponse = zod.unknown()
+
+
+/**
+ * @summary List print-on-demand providers with their configuration status
+ */
+export const GetPrintProvidersResponseItem = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "docsUrl": zod.string(),
+  "enabled": zod.boolean(),
+  "autoSubmit": zod.boolean(),
+  "orderMode": zod.enum(['draft', 'live']),
+  "credentials": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "help": zod.string().optional(),
+  "placeholder": zod.string().optional(),
+  "configured": zod.boolean(),
+  "hint": zod.string().describe('Últimos caracteres de la clave guardada, nunca la clave completa')
+})),
+  "productField": zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "help": zod.string().optional(),
+  "placeholder": zod.string().optional()
+})
+})
+export const GetPrintProvidersResponse = zod.array(GetPrintProvidersResponseItem)
+
+
+/**
+ * @summary Save credentials and settings of a print provider
+ */
+export const UpdatePrintProviderParams = zod.object({
+  "provider": zod.coerce.string()
+})
+
+export const updatePrintProviderBodyCredentialsMaxOne = 500;
+
+
+
+export const UpdatePrintProviderBody = zod.object({
+  "enabled": zod.boolean().optional(),
+  "autoSubmit": zod.boolean().optional(),
+  "orderMode": zod.enum(['draft', 'live']).optional(),
+  "credentials": zod.record(zod.string(), zod.string().max(updatePrintProviderBodyCredentialsMaxOne)).optional().describe('Clave ausente = sin cambios; texto vacío = borrar; texto = guardar')
+})
+
+export const UpdatePrintProviderResponse = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "docsUrl": zod.string(),
+  "enabled": zod.boolean(),
+  "autoSubmit": zod.boolean(),
+  "orderMode": zod.enum(['draft', 'live']),
+  "credentials": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "help": zod.string().optional(),
+  "placeholder": zod.string().optional(),
+  "configured": zod.boolean(),
+  "hint": zod.string().describe('Últimos caracteres de la clave guardada, nunca la clave completa')
+})),
+  "productField": zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "help": zod.string().optional(),
+  "placeholder": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Check that the saved credentials work
+ */
+export const TestPrintProviderParams = zod.object({
+  "provider": zod.coerce.string()
+})
+
+export const TestPrintProviderResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Send (or retry sending) an order to the active print provider
+ */
+export const SubmitOrderToPrinterParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const SubmitOrderToPrinterBody = zod.object({
+  "markPaid": zod.boolean().optional()
+})
+
+export const SubmitOrderToPrinterResponse = zod.object({
+  "status": zod.enum(['draft', 'submitted', 'failed', 'skipped', 'busy', 'unpaid', 'not_found']),
+  "message": zod.string(),
+  "order": zod.object({
+  "id": zod.string().uuid(),
+  "bookTitle": zod.string(),
+  "currency": zod.enum(['USD', 'EUR']),
+  "amount": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string(),
+  "city": zod.string(),
+  "state": zod.string(),
+  "postalCode": zod.string(),
+  "country": zod.string(),
+  "paymentStatus": zod.enum(['pending', 'paid']),
+  "paidAt": zod.coerce.date().optional(),
+  "printProvider": zod.string(),
+  "printStatus": zod.enum(['none', 'submitting', 'draft', 'submitted', 'failed', 'skipped']),
+  "printExternalId": zod.string(),
+  "printError": zod.string(),
+  "printSubmittedAt": zod.coerce.date().optional(),
+  "createdAt": zod.coerce.date()
+})
+})
 
 

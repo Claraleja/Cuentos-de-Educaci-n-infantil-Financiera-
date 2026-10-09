@@ -5,12 +5,14 @@ import {
   ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown,
   CircleHelp, Download, ExternalLink, Eye, EyeOff, Feather, Instagram, Layers3, Library,
   LockKeyhole, LogOut, Mail, Menu, Package, Pencil, Plus, Save, Settings, ShieldCheck,
-  Sparkles, Trash2, Truck, Users, X,
+  Plug, Send, Sparkles, Trash2, Truck, Users, X,
 } from 'lucide-react';
 import {
   getGetAdminBooksQueryKey, getGetAdminSessionQueryKey,
   getGetAdminSettingsQueryKey, getGetStoreBooksQueryKey,
-  getGetStoreSettingsQueryKey, useAdminLogin, useAdminLogout, useCreateBook,
+  getGetStoreSettingsQueryKey, getGetAdminOrdersQueryKey, getGetPrintProvidersQueryKey,
+  useGetPrintProviders, useSubmitOrderToPrinter, useTestPrintProvider, useUpdatePrintProvider,
+  type PrintProvider, type StoreBook, useAdminLogin, useAdminLogout, useCreateBook,
   useCreateCheckoutOrder, useDeleteBook, useGetAdminBooks, useGetAdminOrders,
   useGetAdminSession, useGetAdminSummary, useGetAdminSettings, useGetStoreBooks,
   useGetStoreSettings, useInitializeAdmin, useUpdateBook, useUpdateStoreSettings,
@@ -177,7 +179,7 @@ function Storefront() {
   );
 }
 
-function BookCard({ book, index }: { book: Book; index: number }) {
+function BookCard({ book, index }: { book: StoreBook; index: number }) {
   const cover = book.coverImageUrl || bookCover;
   return (
     <article className={`book-card card-offset-${index % 2}`} data-testid={`card-book-${book.id}`}>
@@ -278,7 +280,7 @@ function AdminGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function AdminShell({ children, current }: { children: ReactNode; current: 'summary' | 'books' | 'orders' | 'settings' }) {
+function AdminShell({ children, current }: { children: ReactNode; current: 'summary' | 'books' | 'orders' | 'integrations' | 'settings' }) {
   const [, setLocation] = useLocation();
   const logout = useAdminLogout();
   const queryClient = useQueryClient();
@@ -286,6 +288,7 @@ function AdminShell({ children, current }: { children: ReactNode; current: 'summ
     { href: '/admin', label: 'Resumen', icon: Layers3, key: 'summary' },
     { href: '/admin/books', label: 'Cuentos', icon: BookOpen, key: 'books' },
     { href: '/admin/orders', label: 'Pedidos', icon: Package, key: 'orders' },
+    { href: '/admin/integrations', label: 'Integraciones', icon: Plug, key: 'integrations' },
     { href: '/admin/settings', label: 'Tienda', icon: Settings, key: 'settings' },
   ];
   return <div className="admin-layout"><aside className="admin-sidebar"><Link href="/" className="admin-brand"><span className="brand-mark"><Feather size={18} /></span><span><strong>El pequeño<br />escritorio</strong><small>CUENTOS · ADMIN</small></span></Link><div className="sidebar-label">GESTIONAR</div><nav className="admin-nav">{navItems.map((item) => { const Icon = item.icon; return <Link href={item.href} key={item.key} className={`admin-nav-link ${current === item.key ? 'active' : ''}`} data-testid={`link-admin-${item.key}`}><Icon size={17} />{item.label}{current === item.key && <span className="nav-current" />}</Link>; })}</nav><div className="sidebar-bottom"><div className="sidebar-status"><span className="status-indicator" />Tienda conectada</div><Link href="/" className="store-link"><ExternalLink size={15} /> Ver tienda</Link><button type="button" className="logout-button" disabled={logout.isPending} onClick={() => logout.mutate(undefined, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetAdminSessionQueryKey() }); setLocation('/admin'); } })} data-testid="button-logout"><LogOut size={15} />{logout.isPending ? 'Saliendo…' : 'Cerrar sesión'}</button></div></aside><div className="admin-main"><header className="admin-topbar"><div className="topbar-breadcrumb"><span>CUENTOS DE EDUCACIÓN FINANCIERA</span><ChevronDown size={14} /><strong>{navItems.find((item) => item.key === current)?.label}</strong></div><div className="admin-user"><span className="admin-avatar">CR</span><span>Administración</span></div></header><main className="admin-content">{children}</main><footer className="admin-footer">Un buen cuento siempre empieza con una pregunta.</footer></div></div>;
@@ -299,7 +302,7 @@ function AdminOverview() {
   </AdminShell>;
 }
 
-const emptyBookForm: BookInput = { title: '', subtitle: '', author: '', shortDescription: '', description: '', recommendedAge: '6 a 10 años (Para leer en familia o en el aula)', pages: 30, priceEur: 0, priceUsd: 0, checkoutUrlEur: '', checkoutUrlUsd: '', coverImageUrl: '' };
+const emptyBookForm: BookInput = { title: '', subtitle: '', author: '', shortDescription: '', description: '', recommendedAge: '6 a 10 años (Para leer en familia o en el aula)', pages: 30, priceEur: 0, priceUsd: 0, checkoutUrlEur: '', checkoutUrlUsd: '', coverImageUrl: '', printProductUids: {}, printFileUrl: '', printPageCount: 0 };
 function BookEditor({ book, onClose }: { book: Book | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const createBook = useCreateBook();
@@ -309,9 +312,11 @@ function BookEditor({ book, onClose }: { book: Book | null; onClose: () => void 
     description: book.description, recommendedAge: book.recommendedAge, pages: book.pages,
     priceEur: book.priceEur, priceUsd: book.priceUsd, checkoutUrlEur: book.checkoutUrlEur,
     checkoutUrlUsd: book.checkoutUrlUsd, coverImageUrl: book.coverImageUrl,
+    printProductUids: book.printProductUids, printFileUrl: book.printFileUrl, printPageCount: book.printPageCount,
   } : emptyBookForm);
+  const providersQuery = useGetPrintProviders();
   const [error, setError] = useState('');
-  const set = (key: keyof BookInput) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((current) => ({ ...current, [key]: key === 'pages' || key === 'priceEur' || key === 'priceUsd' ? Number(event.target.value) : event.target.value } as BookInput));
+  const set = (key: keyof BookInput) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((current) => ({ ...current, [key]: key === 'pages' || key === 'priceEur' || key === 'priceUsd' || key === 'printPageCount' ? Number(event.target.value) : event.target.value } as BookInput));
   const submit = (event: FormEvent) => {
     event.preventDefault(); setError('');
     const onSuccess = () => {
@@ -324,7 +329,9 @@ function BookEditor({ book, onClose }: { book: Book | null; onClose: () => void 
     else createBook.mutate({ data: form }, { onSuccess, onError });
   };
   const pending = createBook.isPending || updateBook.isPending;
-  return <div className="modal-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="editor-modal" role="dialog" aria-modal="true" aria-labelledby="editor-title"><header className="modal-header"><div><span className="section-kicker">{book ? 'EDICIÓN DE CUENTO' : 'NUEVA HISTORIA'}</span><h2 id="editor-title">{book ? 'Editar cuento' : 'Añadir un cuento'}</h2></div><button className="icon-button" type="button" onClick={onClose} aria-label="Cerrar editor" data-testid="button-close-editor"><X size={19} /></button></header><form className="editor-form" onSubmit={submit}><div className="field-grid"><Field label="Título" value={form.title} onChange={set('title')} required maxLength={200} data-testid="input-book-title" /><Field label="Autoría" value={form.author} onChange={set('author')} maxLength={160} data-testid="input-book-author" /><Field label="Subtítulo" value={form.subtitle} onChange={set('subtitle')} maxLength={300} data-testid="input-book-subtitle" /><Field label="Edad recomendada" value={form.recommendedAge} onChange={set('recommendedAge')} maxLength={100} data-testid="input-book-age" /><Field label="Páginas" type="number" min="1" max="5000" value={form.pages} onChange={set('pages')} required data-testid="input-book-pages" /><Field label="Precio en EUR" type="number" min="0" step="0.01" value={form.priceEur} onChange={set('priceEur')} required data-testid="input-book-price-eur" /><Field label="Precio en USD" type="number" min="0" step="0.01" value={form.priceUsd} onChange={set('priceUsd')} required data-testid="input-book-price-usd" /><Field label="URL de portada" value={form.coverImageUrl} onChange={set('coverImageUrl')} maxLength={2000} data-testid="input-book-cover" /></div><TextField label="Descripción breve para la tienda" value={form.shortDescription} onChange={set('shortDescription')} maxLength={500} rows={2} data-testid="input-book-short-description" /><TextField label="Descripción completa" value={form.description} onChange={set('description')} maxLength={10000} rows={4} data-testid="input-book-description" /><div className="field-grid"><Field label="Enlace de pago EUR" value={form.checkoutUrlEur} onChange={set('checkoutUrlEur')} maxLength={2000} data-testid="input-book-checkout-eur" /><Field label="Enlace de pago USD" value={form.checkoutUrlUsd} onChange={set('checkoutUrlUsd')} maxLength={2000} data-testid="input-book-checkout-usd" /></div>{error && <Notice>{error}</Notice>}<div className="modal-actions"><Button type="button" kind="quiet" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={pending} data-testid="button-save-book">{pending ? 'Guardando…' : <><Save size={16} />{book ? 'Guardar cambios' : 'Añadir cuento'}</>}</Button></div></form></section></div>;
+  return <div className="modal-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="editor-modal" role="dialog" aria-modal="true" aria-labelledby="editor-title"><header className="modal-header"><div><span className="section-kicker">{book ? 'EDICIÓN DE CUENTO' : 'NUEVA HISTORIA'}</span><h2 id="editor-title">{book ? 'Editar cuento' : 'Añadir un cuento'}</h2></div><button className="icon-button" type="button" onClick={onClose} aria-label="Cerrar editor" data-testid="button-close-editor"><X size={19} /></button></header><form className="editor-form" onSubmit={submit}><div className="field-grid"><Field label="Título" value={form.title} onChange={set('title')} required maxLength={200} data-testid="input-book-title" /><Field label="Autoría" value={form.author} onChange={set('author')} maxLength={160} data-testid="input-book-author" /><Field label="Subtítulo" value={form.subtitle} onChange={set('subtitle')} maxLength={300} data-testid="input-book-subtitle" /><Field label="Edad recomendada" value={form.recommendedAge} onChange={set('recommendedAge')} maxLength={100} data-testid="input-book-age" /><Field label="Páginas" type="number" min="1" max="5000" value={form.pages} onChange={set('pages')} required data-testid="input-book-pages" /><Field label="Precio en EUR" type="number" min="0" step="0.01" value={form.priceEur} onChange={set('priceEur')} required data-testid="input-book-price-eur" /><Field label="Precio en USD" type="number" min="0" step="0.01" value={form.priceUsd} onChange={set('priceUsd')} required data-testid="input-book-price-usd" /><Field label="URL de portada" value={form.coverImageUrl} onChange={set('coverImageUrl')} maxLength={2000} data-testid="input-book-cover" /></div><TextField label="Descripción breve para la tienda" value={form.shortDescription} onChange={set('shortDescription')} maxLength={500} rows={2} data-testid="input-book-short-description" /><TextField label="Descripción completa" value={form.description} onChange={set('description')} maxLength={10000} rows={4} data-testid="input-book-description" /><div className="field-grid"><Field label="Enlace de pago EUR" value={form.checkoutUrlEur} onChange={set('checkoutUrlEur')} maxLength={2000} data-testid="input-book-checkout-eur" /><Field label="Enlace de pago USD" value={form.checkoutUrlUsd} onChange={set('checkoutUrlUsd')} maxLength={2000} data-testid="input-book-checkout-usd" /></div>
+    <div className="settings-section-head settings-copy-head"><span className="settings-number">POD</span><div><h2>Impresión bajo demanda</h2><p>Códigos y archivo que la imprenta usa para fabricar este libro.</p></div></div>
+    <div className="field-grid">{(providersQuery.data ?? []).map((provider) => <Field key={provider.id} label={provider.productField.label} hint={provider.productField.help} placeholder={provider.productField.placeholder} value={form.printProductUids?.[provider.id] ?? ''} onChange={(event) => setForm((current) => ({ ...current, printProductUids: { ...(current.printProductUids ?? {}), [provider.id]: event.target.value } }))} maxLength={300} data-testid={`input-book-print-uid-${provider.id}`} />)}<Field label="URL del PDF de impresión" hint="PDF listo para imprimir (portada + interior), accesible por la imprenta. No se muestra en la tienda." value={form.printFileUrl ?? ''} onChange={set('printFileUrl')} maxLength={2000} data-testid="input-book-print-file" /><Field label="Páginas para la imprenta" type="number" min="0" max="5000" hint="Total con portadas. 0 = usar el número de páginas del cuento." value={form.printPageCount ?? 0} onChange={set('printPageCount')} data-testid="input-book-print-pages" /></div>{error && <Notice>{error}</Notice>}<div className="modal-actions"><Button type="button" kind="quiet" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={pending} data-testid="button-save-book">{pending ? 'Guardando…' : <><Save size={16} />{book ? 'Guardar cambios' : 'Añadir cuento'}</>}</Button></div></form></section></div>;
 }
 
 function AdminBooks() {
@@ -372,7 +379,94 @@ function AdminOrders() {
 }
 
 function OrdersTable({ orders }: { orders: Order[] }) {
-  return <div className="orders-table-wrap"><table className="orders-table"><thead><tr><th>FAMILIA</th><th>CUENTO</th><th>FECHA</th><th>MONEDA</th><th>TOTAL</th><th>ENVÍO</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} data-testid={`row-order-${order.id}`}><td><strong>{order.fullName}</strong><a href={`mailto:${order.email}`}>{order.email}</a><small>{order.phone}</small></td><td><strong>{order.bookTitle}</strong><small>Pedido {order.id.slice(0, 8)}</small></td><td>{new Date(order.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}</td><td><span className="currency-pill">{order.currency}</span></td><td className="order-amount">{currency(order.amount, order.currency)}</td><td>{order.address}<br />{order.city}, {order.state}<br />{order.postalCode} · {order.country}</td></tr>)}</tbody></table></div>;
+  return <div className="orders-table-wrap"><table className="orders-table"><thead><tr><th>FAMILIA</th><th>CUENTO</th><th>FECHA</th><th>MONEDA</th><th>TOTAL</th><th>ENVÍO</th><th>PAGO</th><th>IMPRENTA</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} data-testid={`row-order-${order.id}`}><td><strong>{order.fullName}</strong><a href={`mailto:${order.email}`}>{order.email}</a><small>{order.phone}</small></td><td><strong>{order.bookTitle}</strong><small>Pedido {order.id.slice(0, 8)}</small></td><td>{new Date(order.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}</td><td><span className="currency-pill">{order.currency}</span></td><td className="order-amount">{currency(order.amount, order.currency)}</td><td>{order.address}<br />{order.city}, {order.state}<br />{order.postalCode} · {order.country}</td><td><span className={`status-pill status-${order.paymentStatus}`}>{order.paymentStatus === 'paid' ? 'Pagado' : 'Pendiente'}</span></td><td><PrintCell order={order} /></td></tr>)}</tbody></table></div>;
+}
+
+const printStatusLabel: Record<Order['printStatus'], string> = {
+  none: 'Sin enviar', submitting: 'Enviando…', draft: 'Borrador (prueba)', submitted: 'Enviado', failed: 'Con error', skipped: 'Omitido',
+};
+
+function PrintCell({ order }: { order: Order }) {
+  const queryClient = useQueryClient();
+  const submit = useSubmitOrderToPrinter();
+  const [message, setMessage] = useState('');
+  const paid = order.paymentStatus === 'paid';
+  const canSend = order.printStatus !== 'submitting' && order.printStatus !== 'submitted';
+  const label = !paid ? 'Marcar pagado y enviar' : order.printStatus === 'failed' ? 'Reintentar envío' : 'Enviar a imprenta';
+  const send = () => {
+    if (!paid && !window.confirm('¿Confirmas que este pedido ya está pagado? Se enviará a la imprenta.')) return;
+    setMessage('');
+    submit.mutate({ id: order.id, data: { markPaid: !paid } }, {
+      onSuccess: (result) => { setMessage(result.message); queryClient.invalidateQueries({ queryKey: getGetAdminOrdersQueryKey() }); },
+      onError: (err) => setMessage(errorText(err)),
+    });
+  };
+  return <div className="print-cell">
+    <span className={`status-pill print-${order.printStatus}`}>{printStatusLabel[order.printStatus]}</span>
+    {order.printExternalId && <small>Ref. {order.printExternalId.slice(0, 8)}</small>}
+    {order.printError && <small className="print-error">{order.printError}</small>}
+    {canSend && <button type="button" className="text-link print-send" onClick={send} disabled={submit.isPending} data-testid={`button-print-order-${order.id}`}><Send size={13} /> {submit.isPending ? 'Enviando…' : label}</button>}
+    {message && <small>{message}</small>}
+  </div>;
+}
+
+function ProviderCard({ provider }: { provider: PrintProvider }) {
+  const queryClient = useQueryClient();
+  const update = useUpdatePrintProvider();
+  const test = useTestPrintProvider();
+  const [enabled, setEnabled] = useState(provider.enabled);
+  const [autoSubmit, setAutoSubmit] = useState(provider.autoSubmit);
+  const [orderMode, setOrderMode] = useState(provider.orderMode);
+  const [secrets, setSecrets] = useState<Record<string, string>>({});
+  const [notice, setNotice] = useState<{ tone: 'error' | 'success' | 'info'; text: string } | null>(null);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: getGetPrintProvidersQueryKey() });
+  const save = (event: FormEvent) => {
+    event.preventDefault(); setNotice(null);
+    const credentials = Object.fromEntries(Object.entries(secrets).filter(([, value]) => value.trim()));
+    update.mutate({ provider: provider.id, data: { enabled, autoSubmit, orderMode, credentials } }, {
+      onSuccess: () => { setSecrets({}); setNotice({ tone: 'success', text: 'Configuración guardada. La clave se almacena cifrada.' }); refresh(); },
+      onError: (err) => setNotice({ tone: 'error', text: errorText(err) }),
+    });
+  };
+  const removeKey = (key: string) => {
+    if (!window.confirm('¿Quitar esta clave guardada?')) return;
+    update.mutate({ provider: provider.id, data: { credentials: { [key]: '' } } }, { onSuccess: refresh, onError: (err) => setNotice({ tone: 'error', text: errorText(err) }) });
+  };
+  const runTest = () => {
+    setNotice(null);
+    test.mutate({ provider: provider.id }, {
+      onSuccess: (result) => setNotice({ tone: result.ok ? 'success' : 'error', text: result.message }),
+      onError: (err) => setNotice({ tone: 'error', text: errorText(err) }),
+    });
+  };
+  return <form className="settings-form admin-panel" onSubmit={save} data-testid={`card-provider-${provider.id}`}>
+    <div className="settings-section-head"><span className="settings-number"><Plug size={16} /></span><div><h2>{provider.label}</h2><p>Impresión bajo demanda. <a className="text-link" href={provider.docsUrl} target="_blank" rel="noreferrer">Documentación <ExternalLink size={12} /></a></p></div></div>
+    <label className="check-row"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} data-testid={`check-provider-enabled-${provider.id}`} /><span><strong>Activar {provider.label}</strong><small>Solo las imprentas activas reciben pedidos.</small></span></label>
+    <div className="settings-form-grid">{provider.credentials.map((field) => <div key={field.key}>
+      <Field label={field.label} type="password" autoComplete="off" spellCheck={false} value={secrets[field.key] ?? ''} onChange={(e) => setSecrets((old) => ({ ...old, [field.key]: e.target.value }))} placeholder={field.configured ? `${field.hint} (guardada) · escribe para reemplazarla` : field.placeholder} hint={field.help} maxLength={500} data-testid={`input-provider-${provider.id}-${field.key}`} />
+      {field.configured && <button type="button" className="text-link" onClick={() => removeKey(field.key)}>Quitar clave guardada</button>}
+    </div>)}</div>
+    <label className="check-row"><input type="checkbox" checked={autoSubmit} onChange={(e) => setAutoSubmit(e.target.checked)} /><span><strong>Enviar pedidos automáticamente</strong><small>Al confirmarse el pago, el servidor crea el pedido en {provider.label} con los datos de envío del cliente.</small></span></label>
+    <div className="mode-group" role="radiogroup" aria-label="Modo de envío">
+      <label className="check-row"><input type="radio" name={`mode-${provider.id}`} checked={orderMode === 'draft'} onChange={() => setOrderMode('draft')} /><span><strong>Modo prueba (borrador)</strong><small>Crea borradores en {provider.label}: no se imprime ni se cobra. Úsalo hasta comprobar un pedido completo.</small></span></label>
+      <label className="check-row"><input type="radio" name={`mode-${provider.id}`} checked={orderMode === 'live'} onChange={() => setOrderMode('live')} /><span><strong>Producción</strong><small>Los pedidos se imprimen y se envían de verdad (se cobran en tu cuenta de {provider.label}).</small></span></label>
+    </div>
+    {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
+    <div className="settings-save-row"><Button type="button" kind="quiet" onClick={runTest} disabled={test.isPending || !provider.credentials.every((f) => f.configured)} data-testid={`button-test-${provider.id}`}>{test.isPending ? 'Probando…' : 'Probar conexión'}</Button><Button type="submit" disabled={update.isPending} data-testid={`button-save-${provider.id}`}>{update.isPending ? 'Guardando…' : <><Save size={16} /> Guardar</>}</Button></div>
+  </form>;
+}
+
+function AdminIntegrations() {
+  const query = useGetPrintProviders();
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  return <AdminShell current="integrations"><div className="admin-page-heading"><div><span className="section-kicker">IMPRESIÓN BAJO DEMANDA</span><h1>Integraciones<br /><em>con imprentas.</em></h1><p>Conecta tu imprenta para que cada pedido pagado se fabrique y envíe solo.</p></div></div>
+    {query.isLoading ? <LoadingRows count={4} /> : query.isError ? <div className="admin-panel"><Notice>{errorText(query.error)}</Notice><Button kind="quiet" onClick={() => query.refetch()}>Volver a cargar</Button></div> : <>
+      {query.data?.map((provider) => <ProviderCard key={provider.id} provider={provider} />)}
+      <section className="admin-panel webhook-help"><div className="settings-section-head"><span className="settings-number"><Truck size={16} /></span><div><h2>Cómo se confirma un pago</h2><p>El envío automático se dispara cuando tu pasarela avisa al servidor.</p></div></div>
+        <p><strong>Stripe:</strong> crea un webhook con el evento <code>checkout.session.completed</code> apuntando a <code>{origin}/api/webhooks/stripe</code> y guarda su secreto en la variable <code>STRIPE_WEBHOOK_SECRET</code>.</p>
+        <p><strong>Otra pasarela:</strong> haz un POST a <code>{origin}/api/webhooks/payment-confirmed</code> con la cabecera <code>Authorization: Bearer &lt;PAYMENT_WEBHOOK_SECRET&gt;</code> y el cuerpo <code>{'{"orderId":"…"}'}</code>.</p>
+        <p>Mientras tanto, en <Link href="/admin/orders" className="text-link">Pedidos</Link> puedes enviar cualquier pedido a mano.</p></section></>}
+  </AdminShell>;
 }
 
 function AdminSettings() {
@@ -409,6 +503,7 @@ function Router() {
     <Route path="/admin"><AdminGate><AdminOverview /></AdminGate></Route>
     <Route path="/admin/books"><AdminGate><AdminBooks /></AdminGate></Route>
     <Route path="/admin/orders"><AdminGate><AdminOrders /></AdminGate></Route>
+    <Route path="/admin/integrations"><AdminGate><AdminIntegrations /></AdminGate></Route>
     <Route path="/admin/settings"><AdminGate><AdminSettings /></AdminGate></Route>
     <Route component={NotFound} />
   </Switch></ErrorBoundary>;

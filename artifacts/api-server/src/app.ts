@@ -28,7 +28,14 @@ app.use(
 );
 app.use(cors());
 app.use(cookieParser());
-app.use(express.json());
+app.use(
+  express.json({
+    // Guarda el cuerpo sin procesar: necesario para verificar la firma de los webhooks de pago.
+    verify: (req, _res, buf) => {
+      (req as typeof req & { rawBody?: Buffer }).rawBody = buf;
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);

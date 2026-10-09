@@ -1229,3 +1229,16 @@ body { background: var(--store-cream); }
   .book-card-image { height: 400px; min-height: 400px; }
   .book-card-copy h3 { margin-top: 12px; }
 }
+/* --- Integraciones de impresión --- */
+.check-row{display:flex;gap:.7rem;align-items:flex-start;padding:.6rem 0;cursor:pointer}
+.check-row input{margin-top:.3rem}
+.check-row small{display:block;opacity:.7;line-height:1.35}
+.mode-group{display:grid;gap:.2rem}
+.status-pill{display:inline-block;padding:.15rem .55rem;border-radius:999px;font-size:.72rem;font-weight:600;background:rgba(0,0,0,.07)}
+.status-paid,.print-submitted{background:#dcefdc;color:#25502b}
+.status-pending,.print-draft,.print-submitting{background:#fbefc9;color:#6b5210}
+.print-failed{background:#f7d9d4;color:#8a2a1b}
+.print-cell{display:flex;flex-direction:column;gap:.25rem;align-items:flex-start;min-width:11rem}
+.print-error{color:#8a2a1b}
+.print-send{display:inline-flex;align-items:center;gap:.3rem;background:none;border:0;padding:0;cursor:pointer}
+.webhook-help code{font-size:.85em;word-break:break-all}

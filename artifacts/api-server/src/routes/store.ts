@@ -11,9 +11,12 @@ import { ensureStoreDefaults } from "../lib/store-data";
 
 const router: IRouter = Router();
 
+// Catálogo público: se excluyen a propósito los datos de impresión (el PDF completo
+// del libro no debe ser descargable por los visitantes).
 function mapBook(book: typeof booksTable.$inferSelect) {
+  const { printProductUids: _uids, printFileUrl: _file, printPageCount: _pages, ...publicBook } = book;
   return {
-    ...book,
+    ...publicBook,
     createdAt: book.createdAt.toISOString(),
     updatedAt: book.updatedAt.toISOString(),
   };
@@ -58,6 +61,16 @@ function validExternalUrl(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+// Enlaces de pago de Stripe: client_reference_id llega de vuelta en el webhook de pago
+// y permite saber qué pedido se pagó (activa el envío automático a la imprenta).
+function withOrderReference(redirectUrl: string, orderId: string): string {
+  const url = new URL(redirectUrl);
+  if (url.hostname === "buy.stripe.com" || url.hostname === "checkout.stripe.com") {
+    url.searchParams.set("client_reference_id", orderId);
+  }
+  return url.toString();
 }
 
 router.get("/books", async (_req, res): Promise<void> => {
@@ -120,7 +133,12 @@ router.post("/checkout", async (req, res): Promise<void> => {
 
   res
     .status(201)
-    .json(CreateCheckoutOrderResponse.parse({ orderId: order.id, redirectUrl }));
+    .json(
+      CreateCheckoutOrderResponse.parse({
+        orderId: order.id,
+        redirectUrl: withOrderReference(redirectUrl, order.id),
+      }),
+    );
 });
 
 export default router;

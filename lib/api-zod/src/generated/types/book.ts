@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { BookPrintProductUids } from './bookPrintProductUids';
 
 export interface Book {
   id: string;
@@ -20,6 +21,9 @@ export interface Book {
   checkoutUrlEur: string;
   checkoutUrlUsd: string;
   coverImageUrl: string;
+  printProductUids: BookPrintProductUids;
+  printFileUrl: string;
+  printPageCount: number;
   createdAt: Date;
   updatedAt: Date;
 }

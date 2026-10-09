@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { BookInputPrintProductUids } from './bookInputPrintProductUids';
 
 export interface BookInput {
   /**
@@ -37,4 +38,12 @@ export interface BookInput {
   checkoutUrlUsd: string;
   /** @maxLength 2000 */
   coverImageUrl: string;
+  printProductUids?: BookInputPrintProductUids;
+  /** @maxLength 2000 */
+  printFileUrl?: string;
+  /**
+     * @minimum 0
+     * @maximum 5000
+     */
+  printPageCount?: number;
 }
