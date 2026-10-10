@@ -234,15 +234,21 @@ export async function submitOrderToPrinter(
   }
 }
 
-/** Punto de entrada cuando se confirma un pago: marca pagado y envía en segundo plano. */
-export async function handlePaymentConfirmed(orderId: string): Promise<{ firstTime: boolean }> {
-  const firstTime = await markOrderPaid(orderId);
+/**
+ * Punto de entrada cuando se confirma un pago: marca pagado y envía a la imprenta.
+ * Se ESPERA al resultado (máx. ~10 s): en plataformas serverless (Stormkit/Lambda) el
+ * proceso se congela al responder, así que no se puede dejar el envío "en segundo plano".
+ */
+export async function handlePaymentConfirmed(orderId: string): Promise<SubmitOutcome> {
+  await markOrderPaid(orderId);
   // También se intenta si el pago ya constaba: el claim evita duplicados y permite
   // recuperar pedidos cuyo envío automático no llegó a ejecutarse.
-  void submitOrderToPrinter(orderId, { trigger: "auto" }).catch((error: unknown) => {
+  try {
+    return await submitOrderToPrinter(orderId, { trigger: "auto" });
+  } catch (error) {
     logger.error({ orderId, err: error instanceof Error ? error.message : "unknown" }, "Fallo en envío automático");
-  });
-  return { firstTime };
+    return { status: "failed", message: "Error inesperado en el envío automático." };
+  }
 }
 
 export { getPrintProvider, listPrintProviders };

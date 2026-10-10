@@ -10,7 +10,11 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// En serverless cada instancia abre pocas conexiones (DB_POOL_MAX) para no agotar el límite de la base.
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: Number(process.env.DB_POOL_MAX) || 5,
+});
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";

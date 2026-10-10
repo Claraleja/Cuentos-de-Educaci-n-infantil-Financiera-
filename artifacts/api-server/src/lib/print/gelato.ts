@@ -8,7 +8,7 @@ import {
 } from "./types";
 
 const ORDER_API = "https://order.gelatoapis.com";
-const TIMEOUT_MS = 20_000;
+const TIMEOUT_MS = 10_000; // en funciones serverless el límite total es de 15 s
 const STATE_REQUIRED = new Set(["US", "CA", "AU"]);
 
 function splitName(fullName: string): { firstName: string; lastName: string } {
