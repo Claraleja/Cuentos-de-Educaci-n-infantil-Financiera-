@@ -8,6 +8,9 @@ sujeto a sus límites).
 El comando `pnpm run build:stormkit` genera ambas carpetas. El servidor crea solo sus tablas
 la primera vez que arranca (base de datos vacía incluida).
 
+> **Versión de Node:** el repositorio fija Node 22 (`mise.toml` y `.node-version`). Sin esto Stormkit
+> instala `node@latest`, que puede no arrancar en su servidor de compilación (falta `libatomic.so.1`).
+
 ## 1) Base de datos
 1. Crea un proyecto Postgres en Neon (o Supabase) y copia la cadena de conexión **con pooler**,
    terminada en `?sslmode=require`.
