@@ -8,7 +8,7 @@ sujeto a sus límites).
 El comando `pnpm run build:stormkit` genera ambas carpetas. El servidor crea solo sus tablas
 la primera vez que arranca (base de datos vacía incluida).
 
-> **Versión de Node:** el repositorio fija Node 22 (`mise.toml` y `.node-version`). Sin esto Stormkit
+> **Versiones:** el repositorio fija Node 22 y pnpm 10 (`mise.toml`; Node también en `.node-version`). Sin esto Stormkit
 > instala `node@latest`, que puede no arrancar en su servidor de compilación (falta `libatomic.so.1`).
 
 ## 1) Base de datos
@@ -18,7 +18,7 @@ la primera vez que arranca (base de datos vacía incluida).
 ## 2) Crear la app en Stormkit
 1. En Stormkit: **New app** → conecta tu GitHub y elige este repositorio (rama `main`).
 2. En **Environments → Config** de tu entorno:
-   - **Build command:** `npm i -g pnpm@10 && pnpm install --frozen-lockfile --prod=false && pnpm run build:stormkit`
+   - **Build command:** `pnpm install --frozen-lockfile --prod=false && pnpm run build:stormkit`
    - **Output folder:** `.stormkit/public`  (si no detecta la API, prueba con `.stormkit`)
 3. En **Environment variables** añade:
 
