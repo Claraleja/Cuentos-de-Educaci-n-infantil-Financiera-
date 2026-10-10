@@ -18,7 +18,7 @@ la primera vez que arranca (base de datos vacía incluida).
 ## 2) Crear la app en Stormkit
 1. En Stormkit: **New app** → conecta tu GitHub y elige este repositorio (rama `main`).
 2. En **Environments → Config** de tu entorno:
-   - **Build command:** `pnpm install --frozen-lockfile --prod=false && pnpm run build:stormkit`
+   - **Build command:** `pnpm run build:stormkit`  (Stormkit ya instala las dependencias en un paso previo; NO uses el comando por defecto `pnpm run build`, que compila también un proyecto de pruebas y falla)
    - **Output folder:** `.stormkit/public`  (si no detecta la API, prueba con `.stormkit`)
 3. En **Environment variables** añade:
 
