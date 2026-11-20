@@ -23,6 +23,8 @@ export const booksTable = pgTable("store_books", {
   checkoutUrlEur: text("checkout_url_eur").notNull().default(""),
   checkoutUrlUsd: text("checkout_url_usd").notNull().default(""),
   coverImageUrl: text("cover_image_url").notNull().default(""),
+  // Colección del libro: 'cuento' (educación financiera) o 'colorear'.
+  category: text("category").notNull().default("cuento"),
   // Libro digital (PDF para descargar, sin envío): el cliente lo descarga tras pagar.
   isDigital: boolean("is_digital").notNull().default(false),
   // URL del PDF que recibe el cliente. Nunca se muestra en el catálogo público.
