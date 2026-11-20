@@ -56,6 +56,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoreSettings"
+  /orders/{id}:
+    get:
+      operationId: getOrderStatus
+      tags: [store]
+      summary: Check an order and its download link
+      description: Public lookup by order id (a random UUID). Only reveals the payment state and, once paid, the download link of a digital order.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Order status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderStatus"
+        "404":
+          description: Order not found
+  /descargar/{token}:
+    get:
+      operationId: downloadOrderFile
+      tags: [store]
+      summary: Download the PDF of a paid digital order
+      description: Redirects (302) to the digital file. Only works for paid digital orders; otherwise 404.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "302":
+          description: Redirect to the digital file
+        "404":
+          description: Download not available
   /checkout:
     post:
       operationId: createCheckoutOrder
@@ -363,6 +399,28 @@ paths:
           description: Administrator authentication required
         "404":
           description: Unknown provider
+  /admin/orders/{id}/confirm-payment:
+    post:
+      operationId: confirmOrderPayment
+      tags: [admin]
+      summary: Confirm an order as paid and release its download
+      description: Manual fallback when the payment provider does not notify the store (for example, after seeing the payment in Tropipay). For digital orders it generates the download token; print orders are only marked as paid, they still need the print button.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Order confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "401":
+          description: Administrator authentication required
+        "404":
+          description: Order not found
   /admin/orders/{id}/print:
     post:
       operationId: submitOrderToPrinter
@@ -415,6 +473,7 @@ components:
         - checkoutUrlEur
         - checkoutUrlUsd
         - coverImageUrl
+        - isDigital
         - createdAt
         - updatedAt
       properties:
@@ -431,6 +490,7 @@ components:
         checkoutUrlEur: { type: string }
         checkoutUrlUsd: { type: string }
         coverImageUrl: { type: string }
+        isDigital: { type: boolean, description: "Libro digital (PDF para descargar, sin envío)" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     Book:
@@ -449,6 +509,8 @@ components:
         - checkoutUrlEur
         - checkoutUrlUsd
         - coverImageUrl
+        - isDigital
+        - digitalFileUrl
         - printProductUids
         - printFileUrl
         - printPageCount
@@ -468,6 +530,8 @@ components:
         checkoutUrlEur: { type: string }
         checkoutUrlUsd: { type: string }
         coverImageUrl: { type: string }
+        isDigital: { type: boolean, description: "Libro digital (PDF para descargar, sin envío)" }
+        digitalFileUrl: { type: string, description: "URL del PDF que recibe el cliente. Nunca se muestra en la tienda." }
         printProductUids:
           type: object
           additionalProperties: { type: string }
@@ -503,6 +567,8 @@ components:
         checkoutUrlEur: { type: string, maxLength: 2000 }
         checkoutUrlUsd: { type: string, maxLength: 2000 }
         coverImageUrl: { type: string, maxLength: 2000 }
+        isDigital: { type: boolean }
+        digitalFileUrl: { type: string, maxLength: 2000 }
         printProductUids:
           type: object
           additionalProperties: { type: string, maxLength: 300 }
@@ -575,21 +641,15 @@ components:
       required:
         - fullName
         - email
-        - phone
-        - address
-        - city
-        - state
-        - postalCode
-        - country
       properties:
         fullName: { type: string, minLength: 2, maxLength: 200 }
         email: { type: string, format: email, maxLength: 320 }
-        phone: { type: string, minLength: 6, maxLength: 40 }
-        address: { type: string, minLength: 4, maxLength: 500 }
-        city: { type: string, minLength: 1, maxLength: 160 }
-        state: { type: string, minLength: 1, maxLength: 160 }
-        postalCode: { type: string, minLength: 1, maxLength: 40 }
-        country: { type: string, minLength: 2, maxLength: 120 }
+        phone: { type: string, maxLength: 40 }
+        address: { type: string, maxLength: 500 }
+        city: { type: string, maxLength: 160 }
+        state: { type: string, maxLength: 160 }
+        postalCode: { type: string, maxLength: 40 }
+        country: { type: string, maxLength: 120 }
     CheckoutInput:
       type: object
       required: [bookId, currency, shipping]
@@ -620,6 +680,7 @@ components:
         - postalCode
         - country
         - paymentStatus
+        - isDigital
         - printProvider
         - printStatus
         - printExternalId
@@ -640,12 +701,24 @@ components:
         country: { type: string }
         paymentStatus: { type: string, enum: [pending, paid] }
         paidAt: { type: string, format: date-time }
+        isDigital: { type: boolean, description: "Pedido de un libro digital (sin envío)" }
+        downloadToken: { type: string, description: "Clave de descarga del PDF. Solo existe cuando el pedido digital está pagado." }
+        downloadedAt: { type: string, format: date-time }
         printProvider: { type: string }
         printStatus: { type: string, enum: [none, submitting, draft, submitted, failed, skipped] }
         printExternalId: { type: string }
         printError: { type: string }
         printSubmittedAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
+    OrderStatus:
+      type: object
+      required: [id, bookTitle, paymentStatus, isDigital]
+      properties:
+        id: { type: string, format: uuid }
+        bookTitle: { type: string }
+        paymentStatus: { type: string, enum: [pending, paid] }
+        isDigital: { type: boolean }
+        downloadUrl: { type: string, description: "Enlace de descarga del PDF. Solo cuando el pedido digital está pagado." }
     PrintFieldDef:
       type: object
       required: [key, label]
