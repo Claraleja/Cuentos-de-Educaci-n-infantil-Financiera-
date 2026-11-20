@@ -10,7 +10,7 @@ import inject from "light-my-request";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureCategorySchema, ensureDigitalSchema, ensurePrintSchema } from "./lib/migrate";
-import { ensureColoringBooks, ensureCuentos, ensureStoreDefaults } from "./lib/store-data";
+import { ensureStoreDefaults } from "./lib/store-data";
 
 let ready: Promise<void> | null = null;
 
@@ -21,8 +21,9 @@ function init(): Promise<void> {
     await ensureDigitalSchema();
     await ensureCategorySchema();
     await ensureStoreDefaults();
-    await ensureColoringBooks();
-    await ensureCuentos();
+    // Los libros NO se siembran por código: se añaden desde /admin (la forma
+    // propia de la tienda, con su portada y su PDF). La siembra automática
+    // tumbó la tienda al desplegar (2026-11-20), así que ya no corre al arrancar.
   })().catch((error: unknown) => {
     ready = null;
     throw error;
