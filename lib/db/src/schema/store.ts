@@ -23,6 +23,10 @@ export const booksTable = pgTable("store_books", {
   checkoutUrlEur: text("checkout_url_eur").notNull().default(""),
   checkoutUrlUsd: text("checkout_url_usd").notNull().default(""),
   coverImageUrl: text("cover_image_url").notNull().default(""),
+  // Libro digital (PDF para descargar, sin envío): el cliente lo descarga tras pagar.
+  isDigital: boolean("is_digital").notNull().default(false),
+  // URL del PDF que recibe el cliente. Nunca se muestra en el catálogo público.
+  digitalFileUrl: text("digital_file_url").notNull().default(""),
   // Códigos de producto por imprenta: { gelato: "<Product UID>", printify: "..." }.
   printProductUids: jsonb("print_product_uids")
     .$type<Record<string, string>>()
@@ -86,6 +90,11 @@ export const ordersTable = pgTable("store_orders", {
   // pending | paid
   paymentStatus: text("payment_status").notNull().default("pending"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  // Copia del tipo de libro en el momento de la compra (el libro puede cambiar después).
+  isDigital: boolean("is_digital").notNull().default(false),
+  // Clave de descarga del PDF (solo para pedidos digitales pagados).
+  downloadToken: text("download_token"),
+  downloadedAt: timestamp("downloaded_at", { withTimezone: true }),
   // Imprenta usada y estado del envío: none | submitting | submitted | failed
   printProvider: text("print_provider").notNull().default(""),
   printStatus: text("print_status").notNull().default("none"),
