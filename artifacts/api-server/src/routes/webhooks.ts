@@ -4,6 +4,11 @@ import { Router, type IRouter, type Request } from "express";
 import { db, ordersTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { handlePaymentConfirmed } from "../lib/print/service";
+import {
+  isPaymentSuccessful,
+  tropipayConfig,
+  verifyPaymentNotification,
+} from "../lib/tropipay";
 
 const router: IRouter = Router();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -182,6 +187,48 @@ router.post("/webhooks/payment-confirmed", async (req, res): Promise<void> => {
     return;
   }
   await handlePaymentConfirmed(matches[0].id);
+  res.json({ received: true });
+});
+
+/**
+ * Tropipay (enlaces de pago creados por la tienda): aviso a `urlNotification`.
+ *
+ *   POST /api/webhooks/tropipay
+ *   Cuerpo: { status: "OK" | "KO", data: { reference, bankOrderCode,
+ *     originalCurrencyAmount, signaturev3, ... } }
+ *   La firma se verifica con signatureV3 = sha256(bankOrderCode + clientId
+ *   + sha1(clientSecret) + originalCurrencyAmount), con las variables
+ *   TROPIPAY_CLIENT_ID y TROPIPAY_CLIENT_SECRET. Sin firma válida: 401 y no
+ *   se hace nada. Con firma válida se responde siempre 200 (como el webhook
+ *   de Stripe) para que Tropipay no reintente avisos inservibles.
+ */
+router.post("/webhooks/tropipay", async (req, res): Promise<void> => {
+  const config = tropipayConfig();
+  if (!config) {
+    res.status(503).json({ error: "Tropipay no está configurado." });
+    return;
+  }
+  const body = req.body as unknown;
+  if (!verifyPaymentNotification(body, config)) {
+    logger.warn("Aviso de Tropipay con firma no válida");
+    res.status(401).json({ error: "Firma no válida." });
+    return;
+  }
+  if (!isPaymentSuccessful(body)) {
+    res.json({ received: true, ignored: "pago no completado" });
+    return;
+  }
+  const data =
+    body && typeof body === "object" && (body as Record<string, unknown>).data &&
+    typeof (body as Record<string, unknown>).data === "object"
+      ? ((body as Record<string, unknown>).data as Record<string, unknown>)
+      : (body as Record<string, unknown>);
+  const reference = typeof data.reference === "string" ? data.reference : "";
+  const result = await confirm(reference);
+  if (result === "unknown") {
+    logger.warn("Aviso de Tropipay con un pedido desconocido");
+  }
+  // 200 aunque el pedido no exista: reintentarlo no lo arregla.
   res.json({ received: true });
 });
 

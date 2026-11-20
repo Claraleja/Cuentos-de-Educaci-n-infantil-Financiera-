@@ -3,18 +3,23 @@ import { Router, type IRouter } from "express";
 import {
   CreateCheckoutOrderBody,
   CreateCheckoutOrderResponse,
+  GetOrderStatusParams,
+  GetOrderStatusResponse,
   GetStoreBooksResponse,
   GetStoreSettingsResponse,
 } from "@workspace/api-zod";
 import { db, booksTable, ordersTable, storeSettingsTable } from "@workspace/db";
+import { getOrderStatus, storeBaseUrl } from "../lib/digital";
+import { logger } from "../lib/logger";
 import { ensureStoreDefaults } from "../lib/store-data";
+import { createPaymentCard, tropipayConfig } from "../lib/tropipay";
 
 const router: IRouter = Router();
 
 // Catálogo público: se excluyen a propósito los datos de impresión (el PDF completo
-// del libro no debe ser descargable por los visitantes).
+// del libro no debe ser descargable por los visitantes) y el PDF digital del cliente.
 function mapBook(book: typeof booksTable.$inferSelect) {
-  const { printProductUids: _uids, printFileUrl: _file, printPageCount: _pages, ...publicBook } = book;
+  const { printProductUids: _uids, printFileUrl: _file, printPageCount: _pages, digitalFileUrl: _digital, ...publicBook } = book;
   return {
     ...publicBook,
     createdAt: book.createdAt.toISOString(),
@@ -89,6 +94,29 @@ router.get("/settings", async (_req, res): Promise<void> => {
   res.json(GetStoreSettingsResponse.parse(publicSettings(settings)));
 });
 
+// Para libros impresos la dirección completa sigue siendo obligatoria (el
+// esquema solo exige nombre y correo porque los digitales no la necesitan).
+function missingPrintShipping(shipping: {
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}): string | null {
+  if ((shipping.phone ?? "").trim().length < 6) return "El teléfono es obligatorio.";
+  if ((shipping.address ?? "").trim().length < 4) return "La dirección es obligatoria.";
+  if (
+    !(shipping.city ?? "").trim() ||
+    !(shipping.state ?? "").trim() ||
+    !(shipping.postalCode ?? "").trim() ||
+    !(shipping.country ?? "").trim()
+  ) {
+    return "La dirección completa es obligatoria para el envío.";
+  }
+  return null;
+}
+
 router.post("/checkout", async (req, res): Promise<void> => {
   const parsed = CreateCheckoutOrderBody.safeParse(req.body);
   if (!parsed.success) {
@@ -108,11 +136,30 @@ router.post("/checkout", async (req, res): Promise<void> => {
   }
 
   const amount = currency === "EUR" ? book.priceEur : book.priceUsd;
+  if (amount <= 0) {
+    res.status(409).json({
+      error:
+        "Este libro todavía no está listo para el pago en esa moneda. Contacta con la tienda.",
+    });
+    return;
+  }
+
+  // Libro digital: solo hacen falta nombre y correo. Libro impreso: dirección completa.
+  if (!book.isDigital) {
+    const missing = missingPrintShipping(shipping);
+    if (missing) {
+      res.status(400).json({ error: missing });
+      return;
+    }
+  }
+
+  const config = tropipayConfig();
+  const storeUrl = storeBaseUrl();
+  const useTropipay = book.isDigital && Boolean(config && storeUrl);
   const configuredUrl =
     currency === "EUR" ? book.checkoutUrlEur : book.checkoutUrlUsd;
-  const redirectUrl = configuredUrl ? validExternalUrl(configuredUrl) : null;
-
-  if (!redirectUrl || amount <= 0) {
+  const manualUrl = configuredUrl ? validExternalUrl(configuredUrl) : null;
+  if (!useTropipay && !manualUrl) {
     res.status(409).json({
       error:
         "Este libro todavía no está listo para el pago en esa moneda. Contacta con la tienda.",
@@ -127,9 +174,48 @@ router.post("/checkout", async (req, res): Promise<void> => {
       bookTitle: book.title,
       currency,
       amount,
-      ...shipping,
+      isDigital: book.isDigital,
+      fullName: shipping.fullName,
+      email: shipping.email,
+      phone: shipping.phone ?? "",
+      address: shipping.address ?? "",
+      city: shipping.city ?? "",
+      state: shipping.state ?? "",
+      postalCode: shipping.postalCode ?? "",
+      country: shipping.country ?? "",
     })
     .returning({ id: ordersTable.id });
+
+  // Libro digital con Tropipay configurado: la tienda crea el enlace de pago
+  // en Tropipay (reference = nº de pedido). Si falla, respaldo al enlace manual.
+  let redirectUrl: string | null = null;
+  if (useTropipay && config) {
+    try {
+      redirectUrl = await createPaymentCard(config, {
+        orderId: order.id,
+        bookTitle: book.title,
+        amountCents: Math.round(amount * 100),
+        currency,
+        customerName: shipping.fullName,
+        customerEmail: shipping.email,
+        storeUrl,
+      });
+    } catch (error) {
+      logger.warn(
+        { orderId: order.id },
+        "No se pudo crear el enlace de Tropipay; se usa el enlace manual",
+      );
+      redirectUrl = null;
+    }
+  }
+  if (!redirectUrl) redirectUrl = manualUrl;
+  if (!redirectUrl) {
+    res.status(409).json({
+      error:
+        "El pago automático no está disponible ahora mismo. Contacta con la tienda.",
+    });
+    return;
+  }
 
   res
     .status(201)
@@ -139,6 +225,22 @@ router.post("/checkout", async (req, res): Promise<void> => {
         redirectUrl: withOrderReference(redirectUrl, order.id),
       }),
     );
+});
+
+// Estado público de un pedido: solo el estado del pago y, si es digital y está
+// pagado, su enlace de descarga. El id es un UUID aleatorio; no revela datos.
+router.get("/orders/:id", async (req, res): Promise<void> => {
+  const params = GetOrderStatusParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const status = await getOrderStatus(params.data.id);
+  if (!status) {
+    res.status(404).json({ error: "No encontramos ese pedido." });
+    return;
+  }
+  res.json(GetOrderStatusResponse.parse(status));
 });
 
 export default router;

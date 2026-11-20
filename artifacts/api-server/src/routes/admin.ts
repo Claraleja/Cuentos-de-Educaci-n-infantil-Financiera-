@@ -4,6 +4,8 @@ import {
   AdminLoginBody,
   AdminLoginResponse,
   AdminLogoutResponse,
+  ConfirmOrderPaymentParams,
+  ConfirmOrderPaymentResponse,
   CreateBookBody,
   CreateBookResponse,
   DeleteBookParams,
@@ -38,7 +40,9 @@ import {
   requireAdmin,
 } from "../lib/admin-auth";
 import { DEFAULT_SETTINGS, ensureStoreDefaults } from "../lib/store-data";
+import { generateDownloadToken } from "../lib/digital";
 import { mapOrder } from "../lib/map-order";
+import { markOrderPaid } from "../lib/print/service";
 
 const router: IRouter = Router();
 
@@ -69,6 +73,7 @@ function validBookUrls(
     checkoutUrlEur: string;
     checkoutUrlUsd: string;
     coverImageUrl: string;
+    digitalFileUrl?: string;
     printFileUrl?: string;
   },
 ): boolean {
@@ -76,6 +81,7 @@ function validBookUrls(
     safeHttpUrl(data.checkoutUrlEur) &&
     safeHttpUrl(data.checkoutUrlUsd) &&
     safeHttpUrl(data.coverImageUrl) &&
+    safeHttpUrl(data.digitalFileUrl ?? "") &&
     safeHttpUrl(data.printFileUrl ?? "")
   );
 }
@@ -338,6 +344,42 @@ router.get("/admin/orders", requireAdmin, async (_req, res): Promise<void> => {
     .from(ordersTable)
     .orderBy(desc(ordersTable.createdAt));
   res.json(GetAdminOrdersResponse.parse(orders.map(mapOrder)));
+});
+
+/**
+ * Confirmar un pedido como pagado a mano (respaldo cuando la pasarela no avisa
+ * a la tienda: la dueña ve el cobro en Tropipay y pulsa el botón en Pedidos).
+ * En pedidos digitales genera además la clave de descarga. Los pedidos impresos
+ * solo se marcan como pagados; el envío a imprenta sigue siendo el botón de
+ * "Enviar a imprenta".
+ */
+router.post("/admin/orders/:id/confirm-payment", requireAdmin, async (req, res): Promise<void> => {
+  const params = ConfirmOrderPaymentParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, params.data.id))
+    .limit(1);
+  if (!order) {
+    res.status(404).json({ error: "No encontramos ese pedido." });
+    return;
+  }
+  await markOrderPaid(order.id);
+  if (order.isDigital) await generateDownloadToken(order.id);
+  const [updated] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, order.id))
+    .limit(1);
+  if (!updated) {
+    res.status(404).json({ error: "No encontramos ese pedido." });
+    return;
+  }
+  res.json(ConfirmOrderPaymentResponse.parse(mapOrder(updated)));
 });
 
 router.get("/admin/orders/export.csv", requireAdmin, async (_req, res): Promise<void> => {
