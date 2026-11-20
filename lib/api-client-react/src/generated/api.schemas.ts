@@ -9,6 +9,17 @@ export interface HealthStatus {
   status: string;
 }
 
+/**
+ * Colección del libro: cuento de educación financiera o libro para colorear
+ */
+export type StoreBookCategory = typeof StoreBookCategory[keyof typeof StoreBookCategory];
+
+
+export const StoreBookCategory = {
+  cuento: 'cuento',
+  colorear: 'colorear',
+} as const;
+
 export interface StoreBook {
   id: string;
   title: string;
@@ -25,9 +36,22 @@ export interface StoreBook {
   coverImageUrl: string;
   /** Libro digital (PDF para descargar, sin envío) */
   isDigital: boolean;
+  /** Colección del libro: cuento de educación financiera o libro para colorear */
+  category: StoreBookCategory;
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Colección del libro: cuento de educación financiera o libro para colorear
+ */
+export type BookCategory = typeof BookCategory[keyof typeof BookCategory];
+
+
+export const BookCategory = {
+  cuento: 'cuento',
+  colorear: 'colorear',
+} as const;
 
 export type BookPrintProductUids = {[key: string]: string};
 
@@ -49,12 +73,25 @@ export interface Book {
   isDigital: boolean;
   /** URL del PDF que recibe el cliente. Nunca se muestra en la tienda. */
   digitalFileUrl: string;
+  /** Colección del libro: cuento de educación financiera o libro para colorear */
+  category: BookCategory;
   printProductUids: BookPrintProductUids;
   printFileUrl: string;
   printPageCount: number;
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Colección del libro. Si no se indica, queda como cuento.
+ */
+export type BookInputCategory = typeof BookInputCategory[keyof typeof BookInputCategory];
+
+
+export const BookInputCategory = {
+  cuento: 'cuento',
+  colorear: 'colorear',
+} as const;
 
 export type BookInputPrintProductUids = {[key: string]: string};
 
@@ -89,6 +126,8 @@ export interface BookInput {
   checkoutUrlUsd: string;
   /** @maxLength 2000 */
   coverImageUrl: string;
+  /** Colección del libro. Si no se indica, queda como cuento. */
+  category?: BookInputCategory;
   isDigital?: boolean;
   /** @maxLength 2000 */
   digitalFileUrl?: string;
