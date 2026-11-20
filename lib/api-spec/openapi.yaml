@@ -474,6 +474,7 @@ components:
         - checkoutUrlUsd
         - coverImageUrl
         - isDigital
+        - category
         - createdAt
         - updatedAt
       properties:
@@ -491,6 +492,7 @@ components:
         checkoutUrlUsd: { type: string }
         coverImageUrl: { type: string }
         isDigital: { type: boolean, description: "Libro digital (PDF para descargar, sin envío)" }
+        category: { type: string, enum: [cuento, colorear], description: "Colección del libro: cuento de educación financiera o libro para colorear" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     Book:
@@ -511,6 +513,7 @@ components:
         - coverImageUrl
         - isDigital
         - digitalFileUrl
+        - category
         - printProductUids
         - printFileUrl
         - printPageCount
@@ -532,6 +535,7 @@ components:
         coverImageUrl: { type: string }
         isDigital: { type: boolean, description: "Libro digital (PDF para descargar, sin envío)" }
         digitalFileUrl: { type: string, description: "URL del PDF que recibe el cliente. Nunca se muestra en la tienda." }
+        category: { type: string, enum: [cuento, colorear], description: "Colección del libro: cuento de educación financiera o libro para colorear" }
         printProductUids:
           type: object
           additionalProperties: { type: string }
@@ -567,6 +571,7 @@ components:
         checkoutUrlEur: { type: string, maxLength: 2000 }
         checkoutUrlUsd: { type: string, maxLength: 2000 }
         coverImageUrl: { type: string, maxLength: 2000 }
+        category: { type: string, enum: [cuento, colorear], description: "Colección del libro. Si no se indica, queda como cuento." }
         isDigital: { type: boolean }
         digitalFileUrl: { type: string, maxLength: 2000 }
         printProductUids:
