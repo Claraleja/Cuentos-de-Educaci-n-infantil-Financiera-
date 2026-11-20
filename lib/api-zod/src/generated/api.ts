@@ -34,6 +34,7 @@ export const GetStoreBooksResponseItem = zod.object({
   "checkoutUrlEur": zod.string(),
   "checkoutUrlUsd": zod.string(),
   "coverImageUrl": zod.string(),
+  "isDigital": zod.boolean().describe('Libro digital (PDF para descargar, sin envío)'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -57,6 +58,34 @@ export const GetStoreSettingsResponse = zod.object({
 
 
 /**
+ * Public lookup by order id (a random UUID). Only reveals the payment state and, once paid, the download link of a digital order.
+ * @summary Check an order and its download link
+ */
+export const GetOrderStatusParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetOrderStatusResponse = zod.object({
+  "id": zod.string().uuid(),
+  "bookTitle": zod.string(),
+  "paymentStatus": zod.enum(['pending', 'paid']),
+  "isDigital": zod.boolean(),
+  "downloadUrl": zod.string().optional().describe('Enlace de descarga del PDF. Solo cuando el pedido digital está pagado.')
+})
+
+
+/**
+ * Redirects (302) to the digital file. Only works for paid digital orders; otherwise 404.
+ * @summary Download the PDF of a paid digital order
+ */
+export const DownloadOrderFileParams = zod.object({
+  "token": zod.coerce.string().uuid()
+})
+
+export const DownloadOrderFileResponse = zod.void()
+
+
+/**
  * @summary Save shipping details and start external checkout
  */
 export const createCheckoutOrderBodyShippingFullNameMin = 2;
@@ -64,10 +93,8 @@ export const createCheckoutOrderBodyShippingFullNameMax = 200;
 
 export const createCheckoutOrderBodyShippingEmailMax = 320;
 
-export const createCheckoutOrderBodyShippingPhoneMin = 6;
 export const createCheckoutOrderBodyShippingPhoneMax = 40;
 
-export const createCheckoutOrderBodyShippingAddressMin = 4;
 export const createCheckoutOrderBodyShippingAddressMax = 500;
 
 export const createCheckoutOrderBodyShippingCityMax = 160;
@@ -76,7 +103,6 @@ export const createCheckoutOrderBodyShippingStateMax = 160;
 
 export const createCheckoutOrderBodyShippingPostalCodeMax = 40;
 
-export const createCheckoutOrderBodyShippingCountryMin = 2;
 export const createCheckoutOrderBodyShippingCountryMax = 120;
 
 
@@ -87,12 +113,12 @@ export const CreateCheckoutOrderBody = zod.object({
   "shipping": zod.object({
   "fullName": zod.string().min(createCheckoutOrderBodyShippingFullNameMin).max(createCheckoutOrderBodyShippingFullNameMax),
   "email": zod.string().email().max(createCheckoutOrderBodyShippingEmailMax),
-  "phone": zod.string().min(createCheckoutOrderBodyShippingPhoneMin).max(createCheckoutOrderBodyShippingPhoneMax),
-  "address": zod.string().min(createCheckoutOrderBodyShippingAddressMin).max(createCheckoutOrderBodyShippingAddressMax),
-  "city": zod.string().min(1).max(createCheckoutOrderBodyShippingCityMax),
-  "state": zod.string().min(1).max(createCheckoutOrderBodyShippingStateMax),
-  "postalCode": zod.string().min(1).max(createCheckoutOrderBodyShippingPostalCodeMax),
-  "country": zod.string().min(createCheckoutOrderBodyShippingCountryMin).max(createCheckoutOrderBodyShippingCountryMax)
+  "phone": zod.string().max(createCheckoutOrderBodyShippingPhoneMax).optional(),
+  "address": zod.string().max(createCheckoutOrderBodyShippingAddressMax).optional(),
+  "city": zod.string().max(createCheckoutOrderBodyShippingCityMax).optional(),
+  "state": zod.string().max(createCheckoutOrderBodyShippingStateMax).optional(),
+  "postalCode": zod.string().max(createCheckoutOrderBodyShippingPostalCodeMax).optional(),
+  "country": zod.string().max(createCheckoutOrderBodyShippingCountryMax).optional()
 })
 })
 
@@ -183,6 +209,8 @@ export const GetAdminBooksResponseItem = zod.object({
   "checkoutUrlEur": zod.string(),
   "checkoutUrlUsd": zod.string(),
   "coverImageUrl": zod.string(),
+  "isDigital": zod.boolean().describe('Libro digital (PDF para descargar, sin envío)'),
+  "digitalFileUrl": zod.string().describe('URL del PDF que recibe el cliente. Nunca se muestra en la tienda.'),
   "printProductUids": zod.record(zod.string(), zod.string()),
   "printFileUrl": zod.string(),
   "printPageCount": zod.number().int(),
@@ -219,6 +247,8 @@ export const createBookBodyCheckoutUrlUsdMax = 2000;
 
 export const createBookBodyCoverImageUrlMax = 2000;
 
+export const createBookBodyDigitalFileUrlMax = 2000;
+
 export const createBookBodyPrintProductUidsMaxOne = 300;
 
 export const createBookBodyPrintFileUrlMax = 2000;
@@ -241,6 +271,8 @@ export const CreateBookBody = zod.object({
   "checkoutUrlEur": zod.string().max(createBookBodyCheckoutUrlEurMax),
   "checkoutUrlUsd": zod.string().max(createBookBodyCheckoutUrlUsdMax),
   "coverImageUrl": zod.string().max(createBookBodyCoverImageUrlMax),
+  "isDigital": zod.boolean().optional(),
+  "digitalFileUrl": zod.string().max(createBookBodyDigitalFileUrlMax).optional(),
   "printProductUids": zod.record(zod.string(), zod.string().max(createBookBodyPrintProductUidsMaxOne)).optional(),
   "printFileUrl": zod.string().max(createBookBodyPrintFileUrlMax).optional(),
   "printPageCount": zod.number().int().min(createBookBodyPrintPageCountMin).max(createBookBodyPrintPageCountMax).optional()
@@ -260,6 +292,8 @@ export const CreateBookResponse = zod.object({
   "checkoutUrlEur": zod.string(),
   "checkoutUrlUsd": zod.string(),
   "coverImageUrl": zod.string(),
+  "isDigital": zod.boolean().describe('Libro digital (PDF para descargar, sin envío)'),
+  "digitalFileUrl": zod.string().describe('URL del PDF que recibe el cliente. Nunca se muestra en la tienda.'),
   "printProductUids": zod.record(zod.string(), zod.string()),
   "printFileUrl": zod.string(),
   "printPageCount": zod.number().int(),
@@ -299,6 +333,8 @@ export const updateBookBodyCheckoutUrlUsdMax = 2000;
 
 export const updateBookBodyCoverImageUrlMax = 2000;
 
+export const updateBookBodyDigitalFileUrlMax = 2000;
+
 export const updateBookBodyPrintProductUidsMaxOne = 300;
 
 export const updateBookBodyPrintFileUrlMax = 2000;
@@ -321,6 +357,8 @@ export const UpdateBookBody = zod.object({
   "checkoutUrlEur": zod.string().max(updateBookBodyCheckoutUrlEurMax),
   "checkoutUrlUsd": zod.string().max(updateBookBodyCheckoutUrlUsdMax),
   "coverImageUrl": zod.string().max(updateBookBodyCoverImageUrlMax),
+  "isDigital": zod.boolean().optional(),
+  "digitalFileUrl": zod.string().max(updateBookBodyDigitalFileUrlMax).optional(),
   "printProductUids": zod.record(zod.string(), zod.string().max(updateBookBodyPrintProductUidsMaxOne)).optional(),
   "printFileUrl": zod.string().max(updateBookBodyPrintFileUrlMax).optional(),
   "printPageCount": zod.number().int().min(updateBookBodyPrintPageCountMin).max(updateBookBodyPrintPageCountMax).optional()
@@ -340,6 +378,8 @@ export const UpdateBookResponse = zod.object({
   "checkoutUrlEur": zod.string(),
   "checkoutUrlUsd": zod.string(),
   "coverImageUrl": zod.string(),
+  "isDigital": zod.boolean().describe('Libro digital (PDF para descargar, sin envío)'),
+  "digitalFileUrl": zod.string().describe('URL del PDF que recibe el cliente. Nunca se muestra en la tienda.'),
   "printProductUids": zod.record(zod.string(), zod.string()),
   "printFileUrl": zod.string(),
   "printPageCount": zod.number().int(),
@@ -440,6 +480,9 @@ export const GetAdminOrdersResponseItem = zod.object({
   "country": zod.string(),
   "paymentStatus": zod.enum(['pending', 'paid']),
   "paidAt": zod.coerce.date().optional(),
+  "isDigital": zod.boolean().describe('Pedido de un libro digital (sin envío)'),
+  "downloadToken": zod.string().optional().describe('Clave de descarga del PDF. Solo existe cuando el pedido digital está pagado.'),
+  "downloadedAt": zod.coerce.date().optional(),
   "printProvider": zod.string(),
   "printStatus": zod.enum(['none', 'submitting', 'draft', 'submitted', 'failed', 'skipped']),
   "printExternalId": zod.string(),
@@ -540,6 +583,41 @@ export const TestPrintProviderResponse = zod.object({
 
 
 /**
+ * Manual fallback when the payment provider does not notify the store (for example, after seeing the payment in Tropipay). For digital orders it generates the download token; print orders are only marked as paid, they still need the print button.
+ * @summary Confirm an order as paid and release its download
+ */
+export const ConfirmOrderPaymentParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ConfirmOrderPaymentResponse = zod.object({
+  "id": zod.string().uuid(),
+  "bookTitle": zod.string(),
+  "currency": zod.enum(['USD', 'EUR']),
+  "amount": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string(),
+  "city": zod.string(),
+  "state": zod.string(),
+  "postalCode": zod.string(),
+  "country": zod.string(),
+  "paymentStatus": zod.enum(['pending', 'paid']),
+  "paidAt": zod.coerce.date().optional(),
+  "isDigital": zod.boolean().describe('Pedido de un libro digital (sin envío)'),
+  "downloadToken": zod.string().optional().describe('Clave de descarga del PDF. Solo existe cuando el pedido digital está pagado.'),
+  "downloadedAt": zod.coerce.date().optional(),
+  "printProvider": zod.string(),
+  "printStatus": zod.enum(['none', 'submitting', 'draft', 'submitted', 'failed', 'skipped']),
+  "printExternalId": zod.string(),
+  "printError": zod.string(),
+  "printSubmittedAt": zod.coerce.date().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Send (or retry sending) an order to the active print provider
  */
 export const SubmitOrderToPrinterParams = zod.object({
@@ -568,6 +646,9 @@ export const SubmitOrderToPrinterResponse = zod.object({
   "country": zod.string(),
   "paymentStatus": zod.enum(['pending', 'paid']),
   "paidAt": zod.coerce.date().optional(),
+  "isDigital": zod.boolean().describe('Pedido de un libro digital (sin envío)'),
+  "downloadToken": zod.string().optional().describe('Clave de descarga del PDF. Solo existe cuando el pedido digital está pagado.'),
+  "downloadedAt": zod.coerce.date().optional(),
   "printProvider": zod.string(),
   "printStatus": zod.enum(['none', 'submitting', 'draft', 'submitted', 'failed', 'skipped']),
   "printExternalId": zod.string(),
