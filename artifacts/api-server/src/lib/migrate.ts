@@ -29,6 +29,8 @@ async function ensureBaseTables(): Promise<void> {
     	"checkout_url_eur" text DEFAULT '' NOT NULL,
     	"checkout_url_usd" text DEFAULT '' NOT NULL,
     	"cover_image_url" text DEFAULT '' NOT NULL,
+    	"is_digital" boolean DEFAULT false NOT NULL,
+    	"digital_file_url" text DEFAULT '' NOT NULL,
     	"print_product_uids" jsonb DEFAULT '{}'::jsonb NOT NULL,
     	"print_file_url" text DEFAULT '' NOT NULL,
     	"print_page_count" integer DEFAULT 0 NOT NULL,
@@ -53,6 +55,9 @@ async function ensureBaseTables(): Promise<void> {
     	"country" text NOT NULL,
     	"payment_status" text DEFAULT 'pending' NOT NULL,
     	"paid_at" timestamp with time zone,
+    	"is_digital" boolean DEFAULT false NOT NULL,
+    	"download_token" text,
+    	"downloaded_at" timestamp with time zone,
     	"print_provider" text DEFAULT '' NOT NULL,
     	"print_status" text DEFAULT 'none' NOT NULL,
     	"print_external_id" text DEFAULT '' NOT NULL,
@@ -121,5 +126,24 @@ export async function ensurePrintSchema(): Promise<void> {
       credentials_encrypted text NOT NULL DEFAULT '',
       updated_at timestamptz NOT NULL DEFAULT now()
     )
+  `);
+}
+
+/**
+ * Migración idempotente de la venta digital (libros con PDF para descargar).
+ * Se ejecuta al arrancar: así desplegar este código no exige correr `db push` a mano.
+ * (Todo usa IF NOT EXISTS, es seguro repetirlo.)
+ */
+export async function ensureDigitalSchema(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE store_books
+      ADD COLUMN IF NOT EXISTS is_digital boolean NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS digital_file_url text NOT NULL DEFAULT ''
+  `);
+  await db.execute(sql`
+    ALTER TABLE store_orders
+      ADD COLUMN IF NOT EXISTS is_digital boolean NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS download_token text,
+      ADD COLUMN IF NOT EXISTS downloaded_at timestamptz
   `);
 }
