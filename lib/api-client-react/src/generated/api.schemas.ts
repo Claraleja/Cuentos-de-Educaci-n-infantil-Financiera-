@@ -23,6 +23,8 @@ export interface StoreBook {
   checkoutUrlEur: string;
   checkoutUrlUsd: string;
   coverImageUrl: string;
+  /** Libro digital (PDF para descargar, sin envío) */
+  isDigital: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +45,10 @@ export interface Book {
   checkoutUrlEur: string;
   checkoutUrlUsd: string;
   coverImageUrl: string;
+  /** Libro digital (PDF para descargar, sin envío) */
+  isDigital: boolean;
+  /** URL del PDF que recibe el cliente. Nunca se muestra en la tienda. */
+  digitalFileUrl: string;
   printProductUids: BookPrintProductUids;
   printFileUrl: string;
   printPageCount: number;
@@ -83,6 +89,9 @@ export interface BookInput {
   checkoutUrlUsd: string;
   /** @maxLength 2000 */
   coverImageUrl: string;
+  isDigital?: boolean;
+  /** @maxLength 2000 */
+  digitalFileUrl?: string;
   printProductUids?: BookInputPrintProductUids;
   /** @maxLength 2000 */
   printFileUrl?: string;
@@ -153,36 +162,18 @@ export interface ShippingDetails {
   fullName: string;
   /** @maxLength 320 */
   email: string;
-  /**
-     * @minLength 6
-     * @maxLength 40
-     */
-  phone: string;
-  /**
-     * @minLength 4
-     * @maxLength 500
-     */
-  address: string;
-  /**
-     * @minLength 1
-     * @maxLength 160
-     */
-  city: string;
-  /**
-     * @minLength 1
-     * @maxLength 160
-     */
-  state: string;
-  /**
-     * @minLength 1
-     * @maxLength 40
-     */
-  postalCode: string;
-  /**
-     * @minLength 2
-     * @maxLength 120
-     */
-  country: string;
+  /** @maxLength 40 */
+  phone?: string;
+  /** @maxLength 500 */
+  address?: string;
+  /** @maxLength 160 */
+  city?: string;
+  /** @maxLength 160 */
+  state?: string;
+  /** @maxLength 40 */
+  postalCode?: string;
+  /** @maxLength 120 */
+  country?: string;
 }
 
 export type CheckoutInputCurrency = typeof CheckoutInputCurrency[keyof typeof CheckoutInputCurrency];
@@ -247,12 +238,34 @@ export interface Order {
   country: string;
   paymentStatus: OrderPaymentStatus;
   paidAt?: string;
+  /** Pedido de un libro digital (sin envío) */
+  isDigital: boolean;
+  /** Clave de descarga del PDF. Solo existe cuando el pedido digital está pagado. */
+  downloadToken?: string;
+  downloadedAt?: string;
   printProvider: string;
   printStatus: OrderPrintStatus;
   printExternalId: string;
   printError: string;
   printSubmittedAt?: string;
   createdAt: string;
+}
+
+export type OrderStatusPaymentStatus = typeof OrderStatusPaymentStatus[keyof typeof OrderStatusPaymentStatus];
+
+
+export const OrderStatusPaymentStatus = {
+  pending: 'pending',
+  paid: 'paid',
+} as const;
+
+export interface OrderStatus {
+  id: string;
+  bookTitle: string;
+  paymentStatus: OrderStatusPaymentStatus;
+  isDigital: boolean;
+  /** Enlace de descarga del PDF. Solo cuando el pedido digital está pagado. */
+  downloadUrl?: string;
 }
 
 export interface PrintFieldDef {

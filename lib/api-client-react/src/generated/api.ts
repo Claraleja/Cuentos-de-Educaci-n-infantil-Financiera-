@@ -29,6 +29,7 @@ import type {
   CheckoutResult,
   HealthStatus,
   Order,
+  OrderStatus,
   PrintProvider,
   PrintProviderTestResult,
   PrintProviderUpdate,
@@ -286,6 +287,162 @@ export function useGetStoreSettings<TData = Awaited<ReturnType<typeof getStoreSe
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetStoreSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetOrderStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/orders/${id}`
+}
+
+/**
+ * Public lookup by order id (a random UUID). Only reveals the payment state and, once paid, the download link of a digital order.
+ * @summary Check an order and its download link
+ */
+export const getOrderStatus = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<OrderStatus> => {
+
+  return customFetch<OrderStatus>(getGetOrderStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrderStatusQueryKey = (id: string,) => {
+    return [
+    `/api/orders/${id}`
+    ] as const;
+    }
+
+
+export const getGetOrderStatusQueryOptions = <TData = Awaited<ReturnType<typeof getOrderStatus>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrderStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrderStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrderStatus>>> = ({ signal }) => getOrderStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrderStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOrderStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getOrderStatus>>>
+export type GetOrderStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Check an order and its download link
+ */
+
+export function useGetOrderStatus<TData = Awaited<ReturnType<typeof getOrderStatus>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrderStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOrderStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDownloadOrderFileUrl = (token: string,) => {
+
+
+
+
+  return `/api/descargar/${token}`
+}
+
+/**
+ * Redirects (302) to the digital file. Only works for paid digital orders; otherwise 404.
+ * @summary Download the PDF of a paid digital order
+ */
+export const downloadOrderFile = async (token: string, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getDownloadOrderFileUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadOrderFileQueryKey = (token: string,) => {
+    return [
+    `/api/descargar/${token}`
+    ] as const;
+    }
+
+
+export const getDownloadOrderFileQueryOptions = <TData = Awaited<ReturnType<typeof downloadOrderFile>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadOrderFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadOrderFileQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadOrderFile>>> = ({ signal }) => downloadOrderFile(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadOrderFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadOrderFileQueryResult = NonNullable<Awaited<ReturnType<typeof downloadOrderFile>>>
+export type DownloadOrderFileQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download the PDF of a paid digital order
+ */
+
+export function useDownloadOrderFile<TData = Awaited<ReturnType<typeof downloadOrderFile>>, TError = ErrorType<void>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadOrderFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadOrderFileQueryOptions(token,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1675,6 +1832,81 @@ export const useTestPrintProvider = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getTestPrintProviderMutationOptions(options));
+    }
+
+export const getConfirmOrderPaymentUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/orders/${id}/confirm-payment`
+}
+
+/**
+ * Manual fallback when the payment provider does not notify the store (for example, after seeing the payment in Tropipay). For digital orders it generates the download token; print orders are only marked as paid, they still need the print button.
+ * @summary Confirm an order as paid and release its download
+ */
+export const confirmOrderPayment = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Order> => {
+
+  return customFetch<Order>(getConfirmOrderPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getConfirmOrderPaymentMutationKey = () => ['confirmOrderPayment'] as const;
+
+export const getConfirmOrderPaymentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmOrderPayment>>, TError,ConfirmOrderPaymentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmOrderPayment>>, TError,ConfirmOrderPaymentMutationVariables, TContext> => {
+
+const mutationKey = getConfirmOrderPaymentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmOrderPayment>>, ConfirmOrderPaymentMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  confirmOrderPayment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmOrderPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof confirmOrderPayment>>>
+
+    export type ConfirmOrderPaymentMutationError = ErrorType<void>
+    export type ConfirmOrderPaymentMutationVariables = {id: string}
+
+    /**
+ * @summary Confirm an order as paid and release its download
+ */
+export const useConfirmOrderPayment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmOrderPayment>>, TError,ConfirmOrderPaymentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmOrderPayment>>,
+        TError,
+        ConfirmOrderPaymentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConfirmOrderPaymentMutationOptions(options));
     }
 
 export const getSubmitOrderToPrinterUrl = (id: string,) => {
