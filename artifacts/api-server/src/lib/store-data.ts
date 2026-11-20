@@ -192,6 +192,45 @@ export const COLORING_BOOKS: ColoringBookSeed[] = [
   },
 ];
 
+const CUENTOS_AUTHOR = "Claricel Rodríguez Asien y Tony Grille Perez";
+const CUENTOS_AGE = "6 a 10 años (para leer en familia o en el aula)";
+
+// Los 2 cuentos de educación financiera, a $5 USD / 5 € (decisión de claricel
+// 2026-11-20). Son digitales: portada + interior en un solo PDF de 32 págs.
+// que se descarga tras el pago. Coautor de los dos: Tony Grille Perez (el
+// interior de ambos libros lo dice así; la portada de El Mercado decía Alina
+// por error y claricel va a pasar la corregida con Tony).
+export const CUENTOS: ColoringBookSeed[] = [
+  {
+    title: "El Mercado de los Deseos",
+    subtitle: "Una aventura para aprender a elegir, ahorrar y cumplir nuestros sueños.",
+    author: CUENTOS_AUTHOR,
+    shortDescription: "Una historia para explorar la diferencia entre necesidades y deseos.",
+    description:
+      "Acompaña a Aina Lucía y Anthony junto a Don Monedín en una aventura donde descubrirán el pasillo de las necesidades y el pasillo de los deseos. Incluye diario de decisiones, el semáforo de las compras y 8 actividades interactivas para realizar en familia.",
+    recommendedAge: CUENTOS_AGE,
+    pages: 32,
+    priceEur: 5,
+    priceUsd: 5,
+    coverImageUrl: "/portadas/el-mercado-de-los-deseos.jpg",
+    digitalFileUrl: "/libros/el-mercado-de-los-deseos.pdf",
+  },
+  {
+    title: "La Aventura del Ahorro",
+    subtitle: "El gran sueño de Aina Lucía",
+    author: CUENTOS_AUTHOR,
+    shortDescription: "Acompaña a Aina Lucía en una aventura donde cada moneda cuenta.",
+    description:
+      "Acompaña a Aina Lucía en una aventura donde cada moneda cuenta. A través de una historia divertida, ilustraciones llenas de color y actividades para completar en familia, los pequeños exploradores descubrirán cómo establecer metas, tomar decisiones y aprender a ahorrar paso a paso. Cuento ilustrado en 10 capítulos con 14 actividades imprimibles, mapa y registro de ahorro, diploma de explorador(a) y guía para acompañar la lectura.",
+    recommendedAge: CUENTOS_AGE,
+    pages: 32,
+    priceEur: 5,
+    priceUsd: 5,
+    coverImageUrl: "/portadas/la-aventura-del-ahorro.jpg",
+    digitalFileUrl: "/libros/la-aventura-del-ahorro.pdf",
+  },
+];
+
 /**
  * Siembra los libros para colorear. Es idempotente y no depende de la bandera
  * `initialBookSeeded` (la base en vivo ya la tiene en true): busca cada libro
@@ -228,6 +267,53 @@ export async function ensureColoringBooks(): Promise<void> {
         await tx.insert(booksTable).values({
           ...seed,
           category: "colorear",
+          isDigital: true,
+          checkoutUrlEur: "",
+          checkoutUrlUsd: "",
+          printProductUids: {},
+          printFileUrl: "",
+          printPageCount: 0,
+        });
+      }
+    }
+  });
+}
+
+/**
+ * Igual que ensureColoringBooks pero para los cuentos de educación financiera
+ * (categoría "cuento"). Actualiza El Mercado de los Deseos (ya existía en la
+ * base con precio 0 y sin archivo) y crea La Aventura del Ahorro.
+ */
+export async function ensureCuentos(): Promise<void> {
+  await db.transaction(async (tx) => {
+    for (const seed of CUENTOS) {
+      const [existing] = await tx
+        .select({ id: booksTable.id })
+        .from(booksTable)
+        .where(eq(booksTable.title, seed.title))
+        .limit(1);
+      if (existing) {
+        await tx
+          .update(booksTable)
+          .set({
+            subtitle: seed.subtitle,
+            author: seed.author,
+            shortDescription: seed.shortDescription,
+            description: seed.description,
+            recommendedAge: seed.recommendedAge,
+            pages: seed.pages,
+            priceEur: seed.priceEur,
+            priceUsd: seed.priceUsd,
+            coverImageUrl: seed.coverImageUrl,
+            category: "cuento",
+            isDigital: true,
+            digitalFileUrl: seed.digitalFileUrl,
+          })
+          .where(eq(booksTable.id, existing.id));
+      } else {
+        await tx.insert(booksTable).values({
+          ...seed,
+          category: "cuento",
           isDigital: true,
           checkoutUrlEur: "",
           checkoutUrlUsd: "",
