@@ -29,6 +29,7 @@ async function ensureBaseTables(): Promise<void> {
     	"checkout_url_eur" text DEFAULT '' NOT NULL,
     	"checkout_url_usd" text DEFAULT '' NOT NULL,
     	"cover_image_url" text DEFAULT '' NOT NULL,
+    	"category" text DEFAULT 'cuento' NOT NULL,
     	"is_digital" boolean DEFAULT false NOT NULL,
     	"digital_file_url" text DEFAULT '' NOT NULL,
     	"print_product_uids" jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -126,6 +127,18 @@ export async function ensurePrintSchema(): Promise<void> {
       credentials_encrypted text NOT NULL DEFAULT '',
       updated_at timestamptz NOT NULL DEFAULT now()
     )
+  `);
+}
+
+/**
+ * Migración idempotente de la colección del libro ('cuento' | 'colorear').
+ * Se ejecuta al arrancar: así desplegar este código no exige correr `db push` a mano.
+ * (Todo usa IF NOT EXISTS, es seguro repetirlo.)
+ */
+export async function ensureCategorySchema(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE store_books
+      ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT 'cuento'
   `);
 }
 
