@@ -30,13 +30,26 @@ la primera vez que arranca (base de datos vacía incluida).
 | `PAYMENT_WEBHOOK_SECRET` | texto largo y aleatorio (confirmación de pagos) |
 | `STRIPE_WEBHOOK_SECRET` | solo si usas Stripe |
 | `PRINT_ENCRYPTION_KEY` | opcional: otra clave larga para cifrar la API key de Gelato |
+| `STORE_URL` | solo si vendes libros digitales: la URL pública de la tienda, sin barra final (p. ej. `https://tu-tienda.stormkit.dev`) |
+| `TROPIPAY_CLIENT_ID` | solo si vendes libros digitales con Tropipay: el client_id de tu cuenta Tropipay |
+| `TROPIPAY_CLIENT_SECRET` | solo si vendes libros digitales con Tropipay: el client_secret de tu cuenta Tropipay |
+| `TROPIPAY_SERVER` | solo si vendes libros digitales con Tropipay: `https://sandbox.tropipay.me` para pruebas, `https://www.tropipay.com` en producción |
 
 4. Pulsa **Deploy now**. Cuando termine, abre la dirección `…stormkit.dev`.
+
+## 2b) Libros digitales con Tropipay (opcional)
+Para vender libros digitales con pago automático:
+1. Pon las cuatro variables de arriba (`STORE_URL`, `TROPIPAY_CLIENT_ID`, `TROPIPAY_CLIENT_SECRET`, `TROPIPAY_SERVER`). **Empieza con el sandbox** (`https://sandbox.tropipay.me`): ahí pruebas el pago sin dinero real.
+2. En `/admin` → Libros, marca el libro como **Libro digital** y pega la **URL del PDF digital** (el archivo que recibe el cliente; nunca se muestra en la tienda).
+3. Al comprar, la tienda crea el enlace de pago en Tropipay y el cliente paga allí. Tropipay avisa solo a la tienda (`<STORE_URL>/api/webhooks/tropipay`) y la descarga se libera en `/gracias?pedido=<id>`.
+4. Si el aviso no llega, en `/admin` → Pedidos pulsa **Confirmar pago**: el pedido se marca pagado y la descarga se libera a mano.
+5. Cuando todo funcione en sandbox, cambia `TROPIPAY_SERVER` a `https://www.tropipay.com` y vuelve a desplegar.
+6. Sin estas variables, los libros digitales usan el enlace de pago manual del libro, como los impresos.
 
 ## 3) Primer uso
 1. Entra a `/admin`, crea la contraseña de administración.
 2. **Integraciones** → pega tu `GELATO_API_KEY` → Guardar → *Probar conexión*. Déjalo en **Modo prueba**.
-3. En cada cuento: enlace de pago, Gelato Product UID, URL del PDF y páginas.
+3. En cada cuento impreso: enlace de pago, Gelato Product UID, URL del PDF y páginas. En cada libro digital: enlace de pago (o Tropipay, si está configurado) y URL del PDF digital.
 
 ## 4) Tu dominio / enlace corto
 Cuando la tienda de Stormkit funcione, cambia el destino de tu enlace
