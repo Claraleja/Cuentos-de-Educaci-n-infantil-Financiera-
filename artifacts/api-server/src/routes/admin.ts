@@ -56,6 +56,9 @@ function mapBook(book: typeof booksTable.$inferSelect) {
 
 function safeHttpUrl(value: string): boolean {
   if (!value) return true;
+  // Rutas relativas del propio sitio (/libros/....pdf, /portadas/....jpg):
+  // los PDF y las portadas de los libros viven en la tienda.
+  if (value.startsWith("/") && !value.startsWith("//")) return true;
   try {
     const url = new URL(value);
     return (
@@ -233,7 +236,12 @@ router.post("/admin/books", requireAdmin, async (req, res): Promise<void> => {
 
   const [book] = await db
     .insert(booksTable)
-    .values({ ...parsed.data, printProductUids: cleanPrintUids(parsed.data.printProductUids) })
+    .values({
+      ...parsed.data,
+      // Si no se indica colección, queda como cuento.
+      category: parsed.data.category ?? "cuento",
+      printProductUids: cleanPrintUids(parsed.data.printProductUids),
+    })
     .returning();
   res.status(201).json(CreateBookResponse.parse(mapBook(book)));
 });

@@ -6,6 +6,9 @@ import { db, booksTable, ordersTable } from "@workspace/db";
 const router: IRouter = Router();
 
 function validFileUrl(value: string): string | null {
+  // Rutas relativas del propio sitio (/libros/....pdf): los PDF de los libros
+  // digitales viven en la tienda. Se devuelven tal cual para la redirección.
+  if (value.startsWith("/") && !value.startsWith("//")) return value;
   try {
     const url = new URL(value);
     if (
