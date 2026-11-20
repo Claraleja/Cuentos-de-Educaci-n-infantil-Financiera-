@@ -6,6 +6,7 @@ import {
   printProviderConfigsTable,
 } from "@workspace/db";
 import { logger } from "../logger";
+import { generateDownloadToken } from "../digital";
 import { decryptJson, encryptJson } from "./crypto";
 import { getPrintProvider, listPrintProviders } from "./registry";
 import { PrintProviderError, type PrintProvider } from "./types";
@@ -130,6 +131,16 @@ export async function submitOrderToPrinter(
     await markOrderPaid(orderId);
   }
 
+  // Pedido digital: no va a imprenta. Si se acaba de marcar pagado, se libera
+  // la descarga (el botón de confirmar pago hace lo mismo).
+  if (order.isDigital) {
+    await generateDownloadToken(orderId);
+    return {
+      status: "skipped",
+      message: "Libro digital: no se envía a imprenta. La descarga queda liberada.",
+    };
+  }
+
   // Imprentas activas (en el orden del registro).
   const candidates: Array<{ provider: PrintProvider; config: ConfigRow }> = [];
   for (const provider of listPrintProviders()) {
@@ -235,12 +246,25 @@ export async function submitOrderToPrinter(
 }
 
 /**
- * Punto de entrada cuando se confirma un pago: marca pagado y envía a la imprenta.
+ * Punto de entrada cuando se confirma un pago: marca pagado y, si es un libro
+ * impreso, envía a la imprenta; si es digital, genera la clave de descarga.
  * Se ESPERA al resultado (máx. ~10 s): en plataformas serverless (Stormkit/Lambda) el
  * proceso se congela al responder, así que no se puede dejar el envío "en segundo plano".
  */
 export async function handlePaymentConfirmed(orderId: string): Promise<SubmitOutcome> {
   await markOrderPaid(orderId);
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, orderId))
+    .limit(1);
+  if (order?.isDigital) {
+    await generateDownloadToken(orderId);
+    return {
+      status: "skipped",
+      message: "Libro digital: descarga liberada.",
+    };
+  }
   // También se intenta si el pago ya constaba: el claim evita duplicados y permite
   // recuperar pedidos cuyo envío automático no llegó a ejecutarse.
   try {
