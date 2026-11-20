@@ -242,6 +242,10 @@
 .section-heading h2,.family-copy h2 { margin: 15px 0 0; font: 600 clamp(37px, 4vw, 52px)/1.08 var(--app-font-serif); letter-spacing: -.04em; color: hsl(223 32% 25%); }
 .section-heading h2 em,.family-copy h2 em,.admin-page-heading h1 em,.checkout-title h1 em { font-weight: 500; color: hsl(13 61% 49%); }
 .section-heading > p { max-width: 320px; margin: 0 20px 4px 0; color: hsl(220 13% 46%); font-size: 13px; line-height: 1.8; }
+.collection-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.collection-tab { min-height: 38px; padding: 0 16px; border: 1px solid hsl(37 23% 80%); border-radius: 999px; background: transparent; color: hsl(223 29% 20%); font-size: 11px; font-weight: 700; letter-spacing: .04em; cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
+.collection-tab:hover { border-color: hsl(13 61% 54%); color: hsl(13 61% 48%); }
+.collection-tab.active { background: hsl(223 32% 25%); border-color: hsl(223 32% 25%); color: hsl(40 51% 98%); }
 .book-list { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
 .book-card { display: grid; grid-template-columns: .87fr 1.13fr; background: hsl(40 51% 98%); border: 1px solid hsl(37 23% 84%); box-shadow: 0 10px 25px hsl(30 30% 20% / .06); min-height: 328px; }
 .book-card.card-offset-1 { margin-top: 42px; }
