@@ -1,7 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureCategorySchema, ensureDigitalSchema, ensurePrintSchema } from "./lib/migrate";
-import { ensureColoringBooks, ensureStoreDefaults } from "./lib/store-data";
+import { ensureColoringBooks, ensureCuentos, ensureStoreDefaults } from "./lib/store-data";
 
 const rawPort = process.env["PORT"];
 
@@ -23,6 +23,7 @@ async function startServer(): Promise<void> {
   await ensureCategorySchema();
   await ensureStoreDefaults();
   await ensureColoringBooks();
+  await ensureCuentos();
   app.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");

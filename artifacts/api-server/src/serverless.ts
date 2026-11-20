@@ -10,7 +10,7 @@ import inject from "light-my-request";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureCategorySchema, ensureDigitalSchema, ensurePrintSchema } from "./lib/migrate";
-import { ensureColoringBooks, ensureStoreDefaults } from "./lib/store-data";
+import { ensureColoringBooks, ensureCuentos, ensureStoreDefaults } from "./lib/store-data";
 
 let ready: Promise<void> | null = null;
 
@@ -22,6 +22,7 @@ function init(): Promise<void> {
     await ensureCategorySchema();
     await ensureStoreDefaults();
     await ensureColoringBooks();
+    await ensureCuentos();
   })().catch((error: unknown) => {
     ready = null;
     throw error;
