@@ -21,6 +21,10 @@ export interface Book {
   checkoutUrlEur: string;
   checkoutUrlUsd: string;
   coverImageUrl: string;
+  /** Libro digital (PDF para descargar, sin envío) */
+  isDigital: boolean;
+  /** URL del PDF que recibe el cliente. Nunca se muestra en la tienda. */
+  digitalFileUrl: string;
   printProductUids: BookPrintProductUids;
   printFileUrl: string;
   printPageCount: number;

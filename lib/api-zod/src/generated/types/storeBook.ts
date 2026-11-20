@@ -20,6 +20,8 @@ export interface StoreBook {
   checkoutUrlEur: string;
   checkoutUrlUsd: string;
   coverImageUrl: string;
+  /** Libro digital (PDF para descargar, sin envío) */
+  isDigital: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

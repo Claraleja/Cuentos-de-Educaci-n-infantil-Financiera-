@@ -21,6 +21,8 @@ export * from './order';
 export * from './orderCurrency';
 export * from './orderPaymentStatus';
 export * from './orderPrintStatus';
+export * from './orderStatus';
+export * from './orderStatusPaymentStatus';
 export * from './printCredentialField';
 export * from './printFieldDef';
 export * from './printProvider';

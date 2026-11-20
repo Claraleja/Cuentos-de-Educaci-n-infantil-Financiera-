@@ -24,6 +24,11 @@ export interface Order {
   country: string;
   paymentStatus: OrderPaymentStatus;
   paidAt?: Date;
+  /** Pedido de un libro digital (sin envío) */
+  isDigital: boolean;
+  /** Clave de descarga del PDF. Solo existe cuando el pedido digital está pagado. */
+  downloadToken?: string;
+  downloadedAt?: Date;
   printProvider: string;
   printStatus: OrderPrintStatus;
   printExternalId: string;

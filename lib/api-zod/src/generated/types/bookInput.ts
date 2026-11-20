@@ -38,6 +38,9 @@ export interface BookInput {
   checkoutUrlUsd: string;
   /** @maxLength 2000 */
   coverImageUrl: string;
+  isDigital?: boolean;
+  /** @maxLength 2000 */
+  digitalFileUrl?: string;
   printProductUids?: BookInputPrintProductUids;
   /** @maxLength 2000 */
   printFileUrl?: string;

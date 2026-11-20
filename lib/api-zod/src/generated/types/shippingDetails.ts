@@ -14,34 +14,16 @@ export interface ShippingDetails {
   fullName: string;
   /** @maxLength 320 */
   email: string;
-  /**
-     * @minLength 6
-     * @maxLength 40
-     */
-  phone: string;
-  /**
-     * @minLength 4
-     * @maxLength 500
-     */
-  address: string;
-  /**
-     * @minLength 1
-     * @maxLength 160
-     */
-  city: string;
-  /**
-     * @minLength 1
-     * @maxLength 160
-     */
-  state: string;
-  /**
-     * @minLength 1
-     * @maxLength 40
-     */
-  postalCode: string;
-  /**
-     * @minLength 2
-     * @maxLength 120
-     */
-  country: string;
+  /** @maxLength 40 */
+  phone?: string;
+  /** @maxLength 500 */
+  address?: string;
+  /** @maxLength 160 */
+  city?: string;
+  /** @maxLength 160 */
+  state?: string;
+  /** @maxLength 40 */
+  postalCode?: string;
+  /** @maxLength 120 */
+  country?: string;
 }
