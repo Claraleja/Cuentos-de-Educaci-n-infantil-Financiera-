@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { BookCategory } from './bookCategory';
 import type { BookPrintProductUids } from './bookPrintProductUids';
 
 export interface Book {
@@ -25,6 +26,8 @@ export interface Book {
   isDigital: boolean;
   /** URL del PDF que recibe el cliente. Nunca se muestra en la tienda. */
   digitalFileUrl: string;
+  /** Colección del libro: cuento de educación financiera o libro para colorear */
+  category: BookCategory;
   printProductUids: BookPrintProductUids;
   printFileUrl: string;
   printPageCount: number;

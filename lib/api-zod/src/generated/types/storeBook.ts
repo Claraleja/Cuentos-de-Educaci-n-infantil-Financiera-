@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { StoreBookCategory } from './storeBookCategory';
 
 export interface StoreBook {
   id: string;
@@ -22,6 +23,8 @@ export interface StoreBook {
   coverImageUrl: string;
   /** Libro digital (PDF para descargar, sin envío) */
   isDigital: boolean;
+  /** Colección del libro: cuento de educación financiera o libro para colorear */
+  category: StoreBookCategory;
   createdAt: Date;
   updatedAt: Date;
 }

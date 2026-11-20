@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { BookInputCategory } from './bookInputCategory';
 import type { BookInputPrintProductUids } from './bookInputPrintProductUids';
 
 export interface BookInput {
@@ -38,6 +39,8 @@ export interface BookInput {
   checkoutUrlUsd: string;
   /** @maxLength 2000 */
   coverImageUrl: string;
+  /** Colección del libro. Si no se indica, queda como cuento. */
+  category?: BookInputCategory;
   isDigital?: boolean;
   /** @maxLength 2000 */
   digitalFileUrl?: string;
