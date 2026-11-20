@@ -58,8 +58,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     await init();
   } catch (error) {
-    logger.error({ err: error instanceof Error ? error.message : "unknown" }, "No se pudo iniciar la tienda");
-    send(res, 500, { "content-type": "application/json" }, Buffer.from(JSON.stringify({ error: "La tienda no pudo iniciarse. Revisa DATABASE_URL." })));
+    const detail = error instanceof Error ? error.message : "unknown";
+    const code = (error as { code?: unknown } | null)?.code;
+    logger.error({ err: detail }, "No se pudo iniciar la tienda");
+    // DIAGNÓSTICO TEMPORAL (2026-11-20): Stormkit convierte el 500 en su página
+    // de error y no deja leer el motivo, así que se devuelve con 200 para poder
+    // leer el error real y luego se revierte a 500.
+    send(res, 200, { "content-type": "application/json" }, Buffer.from(JSON.stringify({ initError: detail, code: code ?? null })));
     return;
   }
 
