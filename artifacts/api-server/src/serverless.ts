@@ -9,7 +9,7 @@ import { STATUS_CODES, type IncomingMessage, type ServerResponse } from "node:ht
 import inject from "light-my-request";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { ensurePrintSchema } from "./lib/migrate";
+import { ensureDigitalSchema, ensurePrintSchema } from "./lib/migrate";
 import { ensureStoreDefaults } from "./lib/store-data";
 
 let ready: Promise<void> | null = null;
@@ -18,6 +18,7 @@ let ready: Promise<void> | null = null;
 function init(): Promise<void> {
   ready ??= (async () => {
     await ensurePrintSchema();
+    await ensureDigitalSchema();
     await ensureStoreDefaults();
   })().catch((error: unknown) => {
     ready = null;

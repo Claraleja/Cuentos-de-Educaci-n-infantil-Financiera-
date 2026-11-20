@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { ensurePrintSchema } from "./lib/migrate";
+import { ensureDigitalSchema, ensurePrintSchema } from "./lib/migrate";
 import { ensureStoreDefaults } from "./lib/store-data";
 
 const rawPort = process.env["PORT"];
@@ -19,6 +19,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function startServer(): Promise<void> {
   await ensurePrintSchema();
+  await ensureDigitalSchema();
   await ensureStoreDefaults();
   app.listen(port, (err) => {
     if (err) {
