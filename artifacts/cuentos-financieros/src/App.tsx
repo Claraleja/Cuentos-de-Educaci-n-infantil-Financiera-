@@ -2,8 +2,8 @@ import { useEffect, useState, type ButtonHTMLAttributes, type ChangeEvent, type 
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import {
-  ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown,
-  CircleHelp, Download, ExternalLink, Eye, EyeOff, Feather, Instagram, Layers3, Library,
+  ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronDown,
+  CircleHelp, Clock, Download, ExternalLink, Eye, EyeOff, Feather, Instagram, Layers3, Library,
   LockKeyhole, LogOut, Mail, Menu, Package, Pencil, Plus, Save, Settings, ShieldCheck,
   Plug, Send, Sparkles, Trash2, Truck, Users, X,
 } from 'lucide-react';
@@ -11,7 +11,9 @@ import {
   getGetAdminBooksQueryKey, getGetAdminSessionQueryKey,
   getGetAdminSettingsQueryKey, getGetStoreBooksQueryKey,
   getGetStoreSettingsQueryKey, getGetAdminOrdersQueryKey, getGetPrintProvidersQueryKey,
+  getGetOrderStatusQueryKey,
   useGetPrintProviders, useSubmitOrderToPrinter, useTestPrintProvider, useUpdatePrintProvider,
+  useConfirmOrderPayment, useGetOrderStatus,
   type PrintProvider, type StoreBook, useAdminLogin, useAdminLogout, useCreateBook,
   useCreateCheckoutOrder, useDeleteBook, useGetAdminBooks, useGetAdminOrders,
   useGetAdminSession, useGetAdminSummary, useGetAdminSettings, useGetStoreBooks,
@@ -184,7 +186,7 @@ function BookCard({ book, index }: { book: StoreBook; index: number }) {
   return (
     <article className={`book-card card-offset-${index % 2}`} data-testid={`card-book-${book.id}`}>
       <div className="book-card-image"><img src={cover} alt={`Portada de ${book.title}`} /></div>
-      <div className="book-card-copy"><span className="section-kicker">UN CUENTO ILUSTRADO</span><span className="book-age-pill">{book.recommendedAge}</span><h3>{book.title}</h3><p className="book-subtitle">{book.subtitle}</p><p className="book-description">{book.shortDescription || book.description}</p><div className="book-card-meta"><span><BookOpen size={15} /> {book.pages} páginas</span><span className="meta-author">por {book.author}</span></div><div className="book-card-bottom"><span className="book-price">{currency(book.priceEur, 'EUR')}<small> / {currency(book.priceUsd, 'USD')}</small></span><Link href={`/checkout/${book.id}`} className="button button-primary" data-testid={`link-buy-${book.id}`}>Quiero leerlo <ArrowRight size={16} /></Link></div></div>
+      <div className="book-card-copy"><span className="section-kicker">UN CUENTO ILUSTRADO</span>{book.isDigital && <span className="book-age-pill">Digital · descarga tras el pago</span>}<span className="book-age-pill">{book.recommendedAge}</span><h3>{book.title}</h3><p className="book-subtitle">{book.subtitle}</p><p className="book-description">{book.shortDescription || book.description}</p><div className="book-card-meta"><span><BookOpen size={15} /> {book.pages} páginas</span><span className="meta-author">por {book.author}</span></div><div className="book-card-bottom"><span className="book-price">{currency(book.priceEur, 'EUR')}<small> / {currency(book.priceUsd, 'USD')}</small></span><Link href={`/checkout/${book.id}`} className="button button-primary" data-testid={`link-buy-${book.id}`}>{book.isDigital ? <>Comprar descarga <ArrowRight size={16} /></> : <>Quiero leerlo <ArrowRight size={16} /></>}</Link></div></div>
     </article>
   );
 }
@@ -202,6 +204,7 @@ function CheckoutPage() {
   const settingsQuery = useGetStoreSettings();
   const settings = settingsQuery.data ?? brandDefaults;
   const book = booksQuery.data?.find((item) => item.id === id);
+  const isDigital = Boolean(book?.isDigital);
   const checkout = useCreateCheckoutOrder();
   const [currencyChoice, setCurrencyChoice] = useState<'EUR' | 'USD'>('EUR');
   const [shipping, setShipping] = useState(blankShipping);
@@ -230,18 +233,18 @@ function CheckoutPage() {
       <Link href="/" className="back-link"><ArrowLeft size={16} /> Volver a la biblioteca</Link>
       {booksQuery.isLoading ? <div className="checkout-loading"><LoadingRows count={4} /></div> : booksQuery.isError ? <div className="empty-state"><h2>No pudimos cargar este cuento</h2><p>{errorText(booksQuery.error)}</p><Button kind="quiet" onClick={() => booksQuery.refetch()}>Intentar de nuevo</Button></div> : !book ? <div className="empty-state"><Package size={30} /><h2>No encontramos ese cuento</h2><p>Puede que el enlace haya cambiado. Vuelve a la biblioteca para elegir otra historia.</p><Link className="button button-primary" href="/">Ir a los cuentos <ArrowRight size={16} /></Link></div> : (
         <div className="checkout-layout">
-          <section className="checkout-form-wrap"><div className="checkout-title"><span className="section-kicker">UN NUEVO CUENTO TE ESPERA</span><h1>Completemos<br /><em>la aventura.</em></h1><p>Déjanos tus datos de envío y elige la moneda para continuar.</p></div>
+          <section className="checkout-form-wrap"><div className="checkout-title"><span className="section-kicker">UN NUEVO CUENTO TE ESPERA</span><h1>Completemos<br /><em>la aventura.</em></h1><p>{isDigital ? 'Solo hacen falta tu nombre y tu correo: el libro te llega por descarga, sin envío.' : 'Déjanos tus datos de envío y elige la moneda para continuar.'}</p></div>
             <form onSubmit={submit} className="shipping-form">
-              <div className="form-section-heading"><span>01</span><div><strong>Datos de envío</strong><small>Todos los campos son obligatorios</small></div></div>
-              <div className="field-grid"><Field label="Nombre completo" name="fullName" autoComplete="name" required minLength={2} value={shipping.fullName} onChange={update('fullName')} data-testid="input-full-name" /><Field label="Correo electrónico" name="email" type="email" autoComplete="email" required value={shipping.email} onChange={update('email')} data-testid="input-email" /><Field label="Teléfono" name="phone" type="tel" autoComplete="tel" required minLength={6} value={shipping.phone} onChange={update('phone')} data-testid="input-phone" /><Field label="Dirección" name="address" autoComplete="street-address" required minLength={4} value={shipping.address} onChange={update('address')} data-testid="input-address" /><Field label="Ciudad" name="city" autoComplete="address-level2" required value={shipping.city} onChange={update('city')} data-testid="input-city" /><Field label="Estado / Provincia" name="state" autoComplete="address-level1" required value={shipping.state} onChange={update('state')} data-testid="input-state" /><Field label="Código postal" name="postalCode" autoComplete="postal-code" required value={shipping.postalCode} onChange={update('postalCode')} data-testid="input-postal-code" /><Field label="País" name="country" autoComplete="country-name" required value={shipping.country} onChange={update('country')} data-testid="input-country" /></div>
+              <div className="form-section-heading"><span>01</span><div><strong>{isDigital ? 'Tus datos' : 'Datos de envío'}</strong><small>{isDigital ? 'Solo nombre y correo' : 'Todos los campos son obligatorios'}</small></div></div>
+              <div className="field-grid"><Field label="Nombre completo" name="fullName" autoComplete="name" required minLength={2} value={shipping.fullName} onChange={update('fullName')} data-testid="input-full-name" /><Field label="Correo electrónico" name="email" type="email" autoComplete="email" required value={shipping.email} onChange={update('email')} data-testid="input-email" />{isDigital ? <Field label="Teléfono (opcional)" name="phone" type="tel" autoComplete="tel" value={shipping.phone} onChange={update('phone')} data-testid="input-phone" /> : <><Field label="Teléfono" name="phone" type="tel" autoComplete="tel" required minLength={6} value={shipping.phone} onChange={update('phone')} data-testid="input-phone" /><Field label="Dirección" name="address" autoComplete="street-address" required minLength={4} value={shipping.address} onChange={update('address')} data-testid="input-address" /><Field label="Ciudad" name="city" autoComplete="address-level2" required value={shipping.city} onChange={update('city')} data-testid="input-city" /><Field label="Estado / Provincia" name="state" autoComplete="address-level1" required value={shipping.state} onChange={update('state')} data-testid="input-state" /><Field label="Código postal" name="postalCode" autoComplete="postal-code" required value={shipping.postalCode} onChange={update('postalCode')} data-testid="input-postal-code" /><Field label="País" name="country" autoComplete="country-name" required value={shipping.country} onChange={update('country')} data-testid="input-country" /></>}</div>
               <div className="form-section-heading currency-heading"><span>02</span><div><strong>Elige tu moneda</strong><small>El pago se completará en una página externa segura</small></div></div>
               <div className="currency-options"><button type="button" className={`currency-choice ${currencyChoice === 'EUR' ? 'selected' : ''}`} onClick={() => setCurrencyChoice('EUR')} data-testid="button-currency-eur"><span className="currency-circle">€</span><span><strong>Euros</strong><small>EUR</small></span><b>{currency(book.priceEur, 'EUR')}</b></button><button type="button" className={`currency-choice ${currencyChoice === 'USD' ? 'selected' : ''}`} onClick={() => setCurrencyChoice('USD')} data-testid="button-currency-usd"><span className="currency-circle">$</span><span><strong>Dólares</strong><small>USD</small></span><b>{currency(book.priceUsd, 'USD')}</b></button></div>
-              <p className="redirect-explainer"><ShieldCheck size={17} /> Al continuar, guardaremos tus datos y te redirigiremos a la página de pago configurada para esta moneda.</p>
+              <p className="redirect-explainer"><ShieldCheck size={17} /> {isDigital ? 'Al continuar, guardaremos tus datos y te redirigiremos a la página segura de pago. Tras pagar, podrás descargar el libro desde la página de gracias.' : 'Al continuar, guardaremos tus datos y te redirigiremos a la página de pago configurada para esta moneda.'}</p>
               {notice && <Notice tone={redirecting ? 'success' : 'error'}>{notice}</Notice>}
               <Button type="submit" disabled={checkout.isPending || redirecting} className="checkout-submit" data-testid="button-submit-checkout">{checkout.isPending ? 'Preparando tu pago…' : redirecting ? 'Redirigiendo…' : <>Continuar al pago seguro <ArrowUpRight size={17} /></>}</Button>
             </form>
           </section>
-          <aside className="order-summary"><span className="section-kicker">TU ELECCIÓN</span><div className="summary-cover"><img src={book.coverImageUrl || bookCover} alt={`Portada de ${book.title}`} /></div><span className="summary-label">CUENTO ILUSTRADO</span><h2>{book.title}</h2><p>{book.subtitle}</p><div className="summary-detail"><span><BookOpen size={15} />{book.pages} páginas</span><span><Users size={15} />{book.recommendedAge}</span></div><div className="summary-total"><span>Total</span><strong>{currency(currencyChoice === 'EUR' ? book.priceEur : book.priceUsd, currencyChoice)}</strong></div><p className="summary-note"><LockKeyhole size={14} /> Tus datos solo se utilizan para gestionar este pedido.</p></aside>
+          <aside className="order-summary"><span className="section-kicker">TU ELECCIÓN</span><div className="summary-cover"><img src={book.coverImageUrl || bookCover} alt={`Portada de ${book.title}`} /></div><span className="summary-label">{isDigital ? 'LIBRO DIGITAL' : 'CUENTO ILUSTRADO'}</span><h2>{book.title}</h2><p>{book.subtitle}</p><div className="summary-detail"><span><BookOpen size={15} />{book.pages} páginas</span><span><Users size={15} />{book.recommendedAge}</span></div><div className="summary-total"><span>Total</span><strong>{currency(currencyChoice === 'EUR' ? book.priceEur : book.priceUsd, currencyChoice)}</strong></div>{isDigital && <p className="summary-note"><Download size={14} /> Descarga inmediata tras el pago · sin envío.</p>}<p className="summary-note"><LockKeyhole size={14} /> Tus datos solo se utilizan para gestionar este pedido.</p></aside>
         </div>
       )}
     </main><StoreFooter settings={settings} /></div>
@@ -302,7 +305,7 @@ function AdminOverview() {
   </AdminShell>;
 }
 
-const emptyBookForm: BookInput = { title: '', subtitle: '', author: '', shortDescription: '', description: '', recommendedAge: '6 a 10 años (Para leer en familia o en el aula)', pages: 30, priceEur: 0, priceUsd: 0, checkoutUrlEur: '', checkoutUrlUsd: '', coverImageUrl: '', printProductUids: {}, printFileUrl: '', printPageCount: 0 };
+const emptyBookForm: BookInput = { title: '', subtitle: '', author: '', shortDescription: '', description: '', recommendedAge: '6 a 10 años (Para leer en familia o en el aula)', pages: 30, priceEur: 0, priceUsd: 0, checkoutUrlEur: '', checkoutUrlUsd: '', coverImageUrl: '', isDigital: false, digitalFileUrl: '', printProductUids: {}, printFileUrl: '', printPageCount: 0 };
 function BookEditor({ book, onClose }: { book: Book | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const createBook = useCreateBook();
@@ -312,6 +315,7 @@ function BookEditor({ book, onClose }: { book: Book | null; onClose: () => void 
     description: book.description, recommendedAge: book.recommendedAge, pages: book.pages,
     priceEur: book.priceEur, priceUsd: book.priceUsd, checkoutUrlEur: book.checkoutUrlEur,
     checkoutUrlUsd: book.checkoutUrlUsd, coverImageUrl: book.coverImageUrl,
+    isDigital: book.isDigital, digitalFileUrl: book.digitalFileUrl,
     printProductUids: book.printProductUids, printFileUrl: book.printFileUrl, printPageCount: book.printPageCount,
   } : emptyBookForm);
   const providersQuery = useGetPrintProviders();
@@ -330,6 +334,9 @@ function BookEditor({ book, onClose }: { book: Book | null; onClose: () => void 
   };
   const pending = createBook.isPending || updateBook.isPending;
   return <div className="modal-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="editor-modal" role="dialog" aria-modal="true" aria-labelledby="editor-title"><header className="modal-header"><div><span className="section-kicker">{book ? 'EDICIÓN DE CUENTO' : 'NUEVA HISTORIA'}</span><h2 id="editor-title">{book ? 'Editar cuento' : 'Añadir un cuento'}</h2></div><button className="icon-button" type="button" onClick={onClose} aria-label="Cerrar editor" data-testid="button-close-editor"><X size={19} /></button></header><form className="editor-form" onSubmit={submit}><div className="field-grid"><Field label="Título" value={form.title} onChange={set('title')} required maxLength={200} data-testid="input-book-title" /><Field label="Autoría" value={form.author} onChange={set('author')} maxLength={160} data-testid="input-book-author" /><Field label="Subtítulo" value={form.subtitle} onChange={set('subtitle')} maxLength={300} data-testid="input-book-subtitle" /><Field label="Edad recomendada" value={form.recommendedAge} onChange={set('recommendedAge')} maxLength={100} data-testid="input-book-age" /><Field label="Páginas" type="number" min="1" max="5000" value={form.pages} onChange={set('pages')} required data-testid="input-book-pages" /><Field label="Precio en EUR" type="number" min="0" step="0.01" value={form.priceEur} onChange={set('priceEur')} required data-testid="input-book-price-eur" /><Field label="Precio en USD" type="number" min="0" step="0.01" value={form.priceUsd} onChange={set('priceUsd')} required data-testid="input-book-price-usd" /><Field label="URL de portada" value={form.coverImageUrl} onChange={set('coverImageUrl')} maxLength={2000} data-testid="input-book-cover" /></div><TextField label="Descripción breve para la tienda" value={form.shortDescription} onChange={set('shortDescription')} maxLength={500} rows={2} data-testid="input-book-short-description" /><TextField label="Descripción completa" value={form.description} onChange={set('description')} maxLength={10000} rows={4} data-testid="input-book-description" /><div className="field-grid"><Field label="Enlace de pago EUR" value={form.checkoutUrlEur} onChange={set('checkoutUrlEur')} maxLength={2000} data-testid="input-book-checkout-eur" /><Field label="Enlace de pago USD" value={form.checkoutUrlUsd} onChange={set('checkoutUrlUsd')} maxLength={2000} data-testid="input-book-checkout-usd" /></div>
+    <div className="settings-section-head settings-copy-head"><span className="settings-number">DIGITAL</span><div><h2>Libro digital</h2><p>Si es digital, el cliente lo descarga tras pagar, sin dirección ni envío.</p></div></div>
+    <label className="check-row"><input type="checkbox" checked={form.isDigital} onChange={(event) => setForm((current) => ({ ...current, isDigital: event.target.checked }))} data-testid="input-book-digital" /><span><strong>Libro digital (PDF para descargar)</strong><small>Sin envío: tras el pago, el cliente descarga el PDF desde la página de gracias.</small></span></label>
+    {form.isDigital && <div className="field-grid"><Field label="URL del PDF digital" hint="El PDF que recibe el cliente. Nunca se muestra en la tienda." value={form.digitalFileUrl ?? ''} onChange={set('digitalFileUrl')} maxLength={2000} data-testid="input-book-digital-file" /></div>}
     <div className="settings-section-head settings-copy-head"><span className="settings-number">POD</span><div><h2>Impresión bajo demanda</h2><p>Códigos y archivo que la imprenta usa para fabricar este libro.</p></div></div>
     <div className="field-grid">{(providersQuery.data ?? []).map((provider) => <Field key={provider.id} label={provider.productField.label} hint={provider.productField.help} placeholder={provider.productField.placeholder} value={form.printProductUids?.[provider.id] ?? ''} onChange={(event) => setForm((current) => ({ ...current, printProductUids: { ...(current.printProductUids ?? {}), [provider.id]: event.target.value } }))} maxLength={300} data-testid={`input-book-print-uid-${provider.id}`} />)}<Field label="URL del PDF de impresión" hint="PDF listo para imprimir (portada + interior), accesible por la imprenta. No se muestra en la tienda." value={form.printFileUrl ?? ''} onChange={set('printFileUrl')} maxLength={2000} data-testid="input-book-print-file" /><Field label="Páginas para la imprenta" type="number" min="0" max="5000" hint="Total con portadas. 0 = usar el número de páginas del cuento." value={form.printPageCount ?? 0} onChange={set('printPageCount')} data-testid="input-book-print-pages" /></div>{error && <Notice>{error}</Notice>}<div className="modal-actions"><Button type="button" kind="quiet" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={pending} data-testid="button-save-book">{pending ? 'Guardando…' : <><Save size={16} />{book ? 'Guardar cambios' : 'Añadir cuento'}</>}</Button></div></form></section></div>;
 }
@@ -378,8 +385,38 @@ function AdminOrders() {
   return <AdminShell current="orders"><div className="admin-page-heading"><div><span className="section-kicker">CUANDO UNA HISTORIA ENCUENTRA HOGAR</span><h1>Pedidos con<br /><em>destino.</em></h1><p>Consulta los datos compartidos durante el proceso de compra.</p></div><Button kind="quiet" onClick={download} disabled={exporting || !query.data?.length} data-testid="button-export-orders"><Download size={16} />{exporting ? 'Preparando…' : 'Exportar CSV'}</Button></div>{error && <Notice>{error}</Notice>}{exportSuccess && <Notice tone="success">{exportSuccess}</Notice>}{query.isLoading ? <LoadingRows count={5} /> : query.isError ? <div className="admin-panel"><Notice>{errorText(query.error)}</Notice><Button kind="quiet" onClick={() => query.refetch()}>Volver a cargar</Button></div> : query.data?.length ? <OrdersTable orders={query.data} /> : <div className="empty-state admin-empty"><div className="empty-illustration"><Package size={29} /></div><h2>Aún no hay pedidos.</h2><p>Cuando una familia inicie una compra, la información aparecerá aquí.</p><Link href="/" className="text-link">Volver a la tienda <ArrowRight size={15} /></Link></div>}</AdminShell>;
 }
 
+function DigitalCell({ order }: { order: Order }) {
+  const queryClient = useQueryClient();
+  const confirmPayment = useConfirmOrderPayment();
+  const [copied, setCopied] = useState(false);
+  const downloadUrl = order.downloadToken ? `${window.location.origin}/api/descargar/${order.downloadToken}` : null;
+  const confirm = async () => {
+    if (!window.confirm('¿Confirmar que este pedido ya está pagado y liberar su descarga?')) return;
+    try {
+      await confirmPayment.mutateAsync({ id: order.id });
+      queryClient.invalidateQueries({ queryKey: getGetAdminOrdersQueryKey() });
+    } catch {
+      window.alert('No se pudo confirmar el pago. Inténtalo de nuevo.');
+    }
+  };
+  const copyLink = async () => {
+    if (!downloadUrl) return;
+    try {
+      await navigator.clipboard.writeText(downloadUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.alert(downloadUrl);
+    }
+  };
+  if (order.paymentStatus !== 'paid') {
+    return <div className="print-cell"><span className="print-status">Digital · sin confirmar</span><Button kind="quiet" onClick={confirm} disabled={confirmPayment.isPending} data-testid={`button-confirm-payment-${order.id}`}>{confirmPayment.isPending ? 'Confirmando…' : 'Confirmar pago'}</Button></div>;
+  }
+  return <div className="print-cell"><span className="print-status print-success">Digital · descarga liberada</span>{downloadUrl && <><a className="button button-quiet" href={downloadUrl} target="_blank" rel="noreferrer"><Download size={15} /> Descargar PDF</a><Button kind="quiet" onClick={copyLink}>{copied ? 'Copiado' : 'Copiar enlace'}</Button></>}{order.downloadedAt && <small>Descargado el {new Date(order.downloadedAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</small>}</div>;
+}
+
 function OrdersTable({ orders }: { orders: Order[] }) {
-  return <div className="orders-table-wrap"><table className="orders-table"><thead><tr><th>FAMILIA</th><th>CUENTO</th><th>FECHA</th><th>MONEDA</th><th>TOTAL</th><th>ENVÍO</th><th>PAGO</th><th>IMPRENTA</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} data-testid={`row-order-${order.id}`}><td><strong>{order.fullName}</strong><a href={`mailto:${order.email}`}>{order.email}</a><small>{order.phone}</small></td><td><strong>{order.bookTitle}</strong><small>Pedido {order.id.slice(0, 8)}</small></td><td>{new Date(order.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}</td><td><span className="currency-pill">{order.currency}</span></td><td className="order-amount">{currency(order.amount, order.currency)}</td><td>{order.address}<br />{order.city}, {order.state}<br />{order.postalCode} · {order.country}</td><td><span className={`status-pill status-${order.paymentStatus}`}>{order.paymentStatus === 'paid' ? 'Pagado' : 'Pendiente'}</span></td><td><PrintCell order={order} /></td></tr>)}</tbody></table></div>;
+  return <div className="orders-table-wrap"><table className="orders-table"><thead><tr><th>FAMILIA</th><th>CUENTO</th><th>FECHA</th><th>MONEDA</th><th>TOTAL</th><th>ENVÍO</th><th>PAGO</th><th>ENTREGA</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} data-testid={`row-order-${order.id}`}><td><strong>{order.fullName}</strong><a href={`mailto:${order.email}`}>{order.email}</a><small>{order.phone}</small></td><td><strong>{order.bookTitle}</strong><small>Pedido {order.id.slice(0, 8)}</small></td><td>{new Date(order.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}</td><td><span className="currency-pill">{order.currency}</span></td><td className="order-amount">{currency(order.amount, order.currency)}</td><td>{order.isDigital ? 'Digital · sin envío' : <>{order.address}<br />{order.city}, {order.state}<br />{order.postalCode} · {order.country}</>}</td><td><span className={`status-pill status-${order.paymentStatus}`}>{order.paymentStatus === 'paid' ? 'Pagado' : 'Pendiente'}</span></td><td>{order.isDigital ? <DigitalCell order={order} /> : <PrintCell order={order} />}</td></tr>)}</tbody></table></div>;
 }
 
 const printStatusLabel: Record<Order['printStatus'], string> = {
@@ -465,7 +502,8 @@ function AdminIntegrations() {
       <section className="admin-panel webhook-help"><div className="settings-section-head"><span className="settings-number"><Truck size={16} /></span><div><h2>Cómo se confirma un pago</h2><p>Puedes poner enlaces de pago de cualquier proveedor (Tropipay, PayPal, Stripe…). El envío automático se dispara cuando se confirma el pago:</p></div></div>
         <p><strong>Cualquier proveedor:</strong> haz un POST a <code>{origin}/api/webhooks/payment-confirmed</code> con el secreto de la variable <code>PAYMENT_WEBHOOK_SECRET</code> (cabecera <code>Authorization: Bearer …</code>, o <code>?secret=…</code> en la URL si el proveedor no permite cabeceras). El cuerpo puede llevar <code>{'{"orderId":"…"}'}</code> o bien el <code>email</code> y el <code>amount</code> del cliente. Sirve para el aviso de la propia pasarela o para Zapier/Make/n8n.</p>
         <p><strong>Stripe:</strong> webhook <code>checkout.session.completed</code> hacia <code>{origin}/api/webhooks/stripe</code> con <code>STRIPE_WEBHOOK_SECRET</code>.</p>
-        <p><strong>Sin automatización:</strong> en <Link href="/admin/orders" className="text-link">Pedidos</Link> pulsa «Marcar pagado y enviar» cuando veas el cobro.</p></section></>}
+        <p><strong>Tropipay (libros digitales):</strong> cuando el libro es digital y Tropipay está configurado en Stormkit (<code>TROPIPAY_CLIENT_ID</code>, <code>TROPIPAY_CLIENT_SECRET</code>, <code>TROPIPAY_SERVER</code> y <code>STORE_URL</code>), la tienda crea el enlace de pago sola y Tropipay avisa a <code>{origin}/api/webhooks/tropipay</code> al pagarse: el pedido se marca pagado y la descarga se libera sola. Empieza en el entorno de pruebas de Tropipay (sandbox) antes de pasar a producción.</p>
+        <p><strong>Sin automatización:</strong> en <Link href="/admin/orders" className="text-link">Pedidos</Link> pulsa «Confirmar pago» (libros digitales) o «Marcar pagado y enviar» (libros impresos) cuando veas el cobro.</p></section></>}
   </AdminShell>;
 }
 
@@ -495,11 +533,34 @@ function AdminSettings() {
   return <AdminShell current="settings"><div className="admin-page-heading"><div><span className="section-kicker">LA VOZ DE TU PROYECTO</span><h1>Un espacio<br /><em>con identidad.</em></h1><p>Actualiza el nombre y las palabras que reciben a cada familia.</p></div></div>{query.isLoading ? <LoadingRows count={4} /> : query.isError ? <div className="admin-panel"><Notice>{errorText(query.error)}</Notice><Button kind="quiet" onClick={() => query.refetch()}>Volver a cargar</Button></div> : <form className="settings-form admin-panel" onSubmit={submit}><div className="settings-section-head"><span className="settings-number">01</span><div><h2>La tienda</h2><p>Nombre y marca que acompañan cada página.</p></div></div><div className="settings-form-grid"><Field label="Nombre de la tienda" value={form.storeName} onChange={set('storeName')} required maxLength={200} data-testid="input-store-name" /><Field label="URL del logo" value={form.logoUrl} onChange={set('logoUrl')} maxLength={2000} data-testid="input-logo-url" /><Field label="Correo de contacto" type="email" value={form.contactEmail} onChange={set('contactEmail')} maxLength={320} data-testid="input-contact-email" /><Field label="Instagram" type="url" value={form.instagramUrl} onChange={set('instagramUrl')} maxLength={2000} data-testid="input-instagram-url" /><Field label="Facebook" type="url" value={form.facebookUrl} onChange={set('facebookUrl')} maxLength={2000} data-testid="input-facebook-url" /></div><div className="settings-section-head settings-copy-head"><span className="settings-number">02</span><div><h2>La portada de bienvenida</h2><p>Las palabras que aparecen en la página principal.</p></div></div><div className="settings-form-grid"><Field label="Distintivo" value={form.heroBadge} onChange={set('heroBadge')} maxLength={200} data-testid="input-hero-badge" /><Field label="Titular principal" value={form.heroTitle} onChange={set('heroTitle')} maxLength={300} data-testid="input-hero-title" /><TextField label="Descripción" value={form.heroSubtitle} onChange={set('heroSubtitle')} maxLength={1200} rows={4} data-testid="input-hero-subtitle" /><TextField label="Frase destacada" value={form.heroQuote} onChange={set('heroQuote')} maxLength={500} rows={2} data-testid="input-hero-quote" /></div>{error && <Notice>{error}</Notice>}{saved && <Notice tone="success">Los cambios se guardaron y ya están disponibles en la tienda.</Notice>}<div className="settings-save-row"><span>Los cambios se publican al guardar.</span><Button type="submit" disabled={mutation.isPending} data-testid="button-save-settings">{mutation.isPending ? 'Guardando…' : <><Save size={16} /> Guardar cambios</>}</Button></div></form>}</AdminShell>;
 }
 
+function ThankYouPage() {
+  const settingsQuery = useGetStoreSettings();
+  const settings = settingsQuery.data ?? brandDefaults;
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('pedido') ?? '';
+  const failed = params.get('pago') === 'fallido';
+  const statusQuery = useGetOrderStatus(orderId, { query: { enabled: Boolean(orderId), queryKey: getGetOrderStatusQueryKey(orderId) } });
+  const status = statusQuery.data;
+  return (
+    <div className="paper-grain checkout-page"><TopBar settings={settings} /><main className="checkout-main">
+      <Link href="/" className="back-link"><ArrowLeft size={16} /> Volver a la biblioteca</Link>
+      {!orderId ? <div className="empty-state"><Package size={30} /><h2>No encontramos tu pedido</h2><p>Este enlace no trae el número de pedido. Vuelve a la tienda para elegir tu cuento.</p><Link className="button button-primary" href="/">Ir a los cuentos <ArrowRight size={16} /></Link></div>
+      : statusQuery.isLoading ? <div className="checkout-loading"><LoadingRows count={4} /></div>
+      : statusQuery.isError || !status ? <div className="empty-state"><h2>No encontramos ese pedido</h2><p>Puede que el enlace haya cambiado. Vuelve a la biblioteca para elegir otra historia.</p><Link className="button button-primary" href="/">Ir a los cuentos <ArrowRight size={16} /></Link></div>
+      : failed ? <div className="empty-state"><CircleHelp size={30} /><h2>El pago no se completó</h2><p>No te preocupes: no se cobró nada. Puedes volver a intentarlo desde la tienda.</p><Link className="button button-primary" href="/">Ir a los cuentos <ArrowRight size={16} /></Link></div>
+      : status.paymentStatus === 'paid' && status.downloadUrl ? <div className="empty-state"><CheckCircle2 size={30} /><h2>¡Pago confirmado!</h2><p>«{status.bookTitle}» ya es tuyo. Descarga tu libro aquí mismo.</p><a className="button button-primary" href={status.downloadUrl}><Download size={16} /> Descargar mi libro</a><p className="summary-note">Guarda este enlace: es tu copia del libro.</p></div>
+      : status.paymentStatus === 'paid' ? <div className="empty-state"><CheckCircle2 size={30} /><h2>¡Pago confirmado!</h2><p>Tu pedido de «{status.bookTitle}» está en camino. Te avisaremos cuando se envíe.</p><Link className="button button-primary" href="/">Ir a los cuentos <ArrowRight size={16} /></Link></div>
+      : <div className="empty-state"><Clock size={30} /><h2>Tu pago está en revisión</h2><p>En cuanto se confirme el pago de «{status.bookTitle}», aparecerá aquí tu botón de descarga. Si ya pagaste, espera unos segundos y vuelve a comprobar.</p><Button kind="quiet" onClick={() => statusQuery.refetch()}>Volver a comprobar</Button></div>}
+    </main></div>
+  );
+}
+
 function Router() {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}><Switch>
     <Route path="/" component={Storefront} />
     <Route path="/checkout/:id" component={CheckoutPage} />
+    <Route path="/gracias" component={ThankYouPage} />
     <Route path="/admin"><AdminGate><AdminOverview /></AdminGate></Route>
     <Route path="/admin/books"><AdminGate><AdminBooks /></AdminGate></Route>
     <Route path="/admin/orders"><AdminGate><AdminOrders /></AdminGate></Route>
