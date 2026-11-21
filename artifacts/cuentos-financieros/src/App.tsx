@@ -138,7 +138,7 @@ function Storefront() {
               <div className="book-mock">
                 <img src={bookCover} alt="Portada de El Mercado de los Deseos" />
               </div>
-              <span className="art-stamp">30<br /><small>PÁGINAS</small></span>
+              <span className="art-stamp">32<br /><small>PÁGINAS</small></span>
               <span className="art-note">lee · conversa · decide</span>
             </div>
           </div>
@@ -176,7 +176,7 @@ function Storefront() {
 
         <section className="family-section" id="familias">
           <div className="family-illustration">
-            <div className="family-paper"><span className="family-sticker">JUNTOS<br />APRENDEMOS</span><div className="family-sun" /><div className="family-hill hill-one" /><div className="family-hill hill-two" /><div className="family-lines"><span /><span /><span /></div></div>
+            <img className="family-books" src="/portadas/serie-completa.jpg" alt="Los 9 libros para colorear de la serie completa" />
           </div>
           <div className="family-copy"><span className="section-kicker">UNA HISTORIA TAMBIÉN ES UNA CONVERSACIÓN</span><h2>Para leer con ellos.<br /><em>Y aprender junto a ellos.</em></h2><p>Los niños no necesitan respuestas perfectas. Necesitan espacio para preguntar, imaginar y ensayar sus propias decisiones, con una persona adulta cerca.</p><ul><li><span><Check size={14} /></span>Actividades sencillas para hacer en familia</li><li><span><Check size={14} /></span>Situaciones cercanas a su día a día</li><li><span><Check size={14} /></span>Una guía pensada también para madres y padres</li></ul><a href="#libros" className="text-link">Elige una historia <ArrowRight size={16} /></a></div>
         </section>
